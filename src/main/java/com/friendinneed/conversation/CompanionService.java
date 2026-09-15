@@ -4,6 +4,7 @@ import com.friendinneed.memory.MemoryService;
 import com.friendinneed.profile.CompanionProfile;
 import com.friendinneed.profile.CompanionProfileRepository;
 import com.friendinneed.token.TokenBudgetService;
+import com.friendinneed.emotion.EmotionService;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -34,12 +35,13 @@ public class CompanionService {
     private final MemoryService memory;
     private final ResourceLoader resourceLoader;
     private final TokenBudgetService tokenBudget;
+    private final EmotionService emotions;
 
     public CompanionService(ChatClient.Builder builder, ConversationMessageRepository messages,
             CompanionProfileRepository profiles, MemoryService memory, ResourceLoader resourceLoader,
-            TokenBudgetService tokenBudget) {
+            TokenBudgetService tokenBudget, EmotionService emotions) {
         this.chat = builder.build(); this.messages = messages; this.profiles = profiles;
-        this.memory = memory; this.resourceLoader = resourceLoader; this.tokenBudget = tokenBudget;
+        this.memory = memory; this.resourceLoader = resourceLoader; this.tokenBudget = tokenBudget; this.emotions = emotions;
     }
 
     @Transactional
@@ -48,13 +50,15 @@ public class CompanionService {
         CompanionProfile profile = profiles.findById(profileId)
                 .orElseThrow(() -> new NoSuchElementException("Profile not found"));
         ConversationMessage userMessage = messages.save(new ConversationMessage(profileId, MessageRole.USER, text));
+        EmotionService.EmotionResult emotion = emotions.detectFromText(text);
+        userMessage.setEmotion(emotion.emotion(), emotion.confidence());
         List<ConversationMessage> recentMessages = new ArrayList<>(messages.findTop12ByProfileIdOrderByCreatedAtDesc(profileId));
         Collections.reverse(recentMessages);
         String history = recentMessages.stream().filter(message -> !message.getId().equals(userMessage.getId())).limit(10)
                 .map(message -> message.getRole() + ": " + message.getContent()).collect(Collectors.joining("\n"));
         String memories = memory.relevantTo(profileId, text);
         String system = renderSystemPrompt(Map.of("displayName", profile.getDisplayName(), "personality", profile.getPersonality(),
-                "interests", profile.getInterests(), "memories", "", "context", context, "history", ""));
+                "interests", profile.getInterests(), "memories", "", "context", context + " The user current emotional state appears to be: " + emotion.emotion() + " (confidence: " + emotion.confidence() + "). Adjust your tone accordingly.", "history", ""));
         String prompt = tokenBudget.trimToFit(system, history, memories, 0);
         String answer = chat.prompt().system(prompt).user(text).call().content();
         messages.save(new ConversationMessage(profileId, MessageRole.ASSISTANT, answer));

@@ -8,3 +8,5 @@
 @media (max-width:768px){main{grid-template-columns:1fr}aside{display:none}aside.open{display:flex;position:fixed;inset:0;z-index:5}.conversation{padding:20px 16px 16px}form#composer{flex-wrap:nowrap}header{flex-wrap:wrap;gap:8px}dialog{width:100%;max-width:none}dialog form,.camera-panel{width:100%;min-height:100vh}}
 
 #voice-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#87968d}#voice-dot.active{background:#e54b43;animation:pulse 1s infinite}@keyframes pulse{50%{opacity:.35;transform:scale(1.5)}}#latency{font-size:11px;color:#65746c;margin-top:10px}
+
+.emotion-dot{width:8px;height:8px;border-radius:50%;display:inline-block}.emotion-dot.joy{background:#4eaf61}.emotion-dot.sadness{background:#5288c7}.emotion-dot.anger{background:#d84d4d}.emotion-dot.fear{background:#9560b5}.emotion-dot.surprise{background:#e2bd38}.emotion-dot.neutral{background:#888}.mood-strip{display:flex;gap:5px;margin-top:8px}

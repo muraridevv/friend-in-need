@@ -166,6 +166,13 @@ public class CompanionController {
         memory.remember(id, request.content(), request.importance());
     }
 
+    @GetMapping("/profiles/{id}/emotions")
+    List<EmotionView> emotions(@PathVariable UUID id, @RequestParam(defaultValue = "20") int limit) {
+        profile(id);
+        return messages.findTop20ByProfileIdOrderByCreatedAtDesc(id).stream().limit(Math.max(1, Math.min(limit, 20)))
+                .map(message -> new EmotionView(message.getRole(), message.getContent(), message.getEmotion(), message.getEmotionConfidence(), message.getCreatedAt())).toList();
+    }
+
     @GetMapping("/profiles/{id}/conversations/export")
     ResponseEntity<List<ConversationMessage>> exportConversations(@PathVariable UUID id) {
         profile(id);
@@ -237,6 +244,8 @@ public class CompanionController {
             return new CalendarView(event.getId(), event.getTitle(), event.getStartsAt(), event.getEndsAt());
         }
     }
+
+    record EmotionView(com.friendinneed.conversation.MessageRole role, String content, com.friendinneed.emotion.EmotionLabel emotion, Float emotionConfidence, Instant createdAt) { }
 
     record Briefing(String weather, List<CalendarView> events, List<NewsService.NewsItem> headlines) { }
 

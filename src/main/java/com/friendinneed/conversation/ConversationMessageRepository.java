@@ -10,4 +10,5 @@ public interface ConversationMessageRepository extends JpaRepository<Conversatio
     int deleteByCreatedAtBefore(Instant cutoff);
     List<ConversationMessage> findByProfileIdOrderByCreatedAtAsc(UUID profileId);
     long deleteByProfileId(UUID profileId);
+    List<ConversationMessage> findTop20ByProfileIdOrderByCreatedAtDesc(UUID profileId);
 }
