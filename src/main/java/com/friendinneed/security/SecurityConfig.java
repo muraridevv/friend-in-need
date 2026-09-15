@@ -18,7 +18,7 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtFilter, RateLimitFilter rateLimitFilter) throws Exception {
         return http.cors(Customizer.withDefaults()).csrf(csrf -> csrf.disable()).sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth.requestMatchers("/api/auth/register", "/api/auth/login", "/api/system/status", "/swagger-ui/**", "/v3/api-docs/**", "/", "/*.css", "/*.js").permitAll().requestMatchers("/api/**").authenticated().anyRequest().permitAll())
+                .authorizeHttpRequests(auth -> auth.requestMatchers("/api/auth/register", "/api/auth/login", "/api/system/status", "/swagger-ui/**", "/v3/api-docs/**", "/", "/*.css", "/*.js").permitAll().requestMatchers("/actuator/**").authenticated().requestMatchers("/api/**").authenticated().anyRequest().permitAll())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(rateLimitFilter, JwtAuthenticationFilter.class).build();
     }

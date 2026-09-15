@@ -18,16 +18,16 @@ public class ModelRouter {
     private final String openRouterUrl;
     private final String voiceUrl;
     private final String embeddingUrl;
-    private final boolean preferLocal;
+    private final boolean preferLocal; private final boolean allowSimulateOffline;
 
     public ModelRouter(@Qualifier("openRouterHealthPinger") HealthPinger openRouter, @Qualifier("voiceHealthPinger") HealthPinger voice, @Qualifier("embeddingHealthPinger") HealthPinger embedding,
             @Value("${spring.ai.openai.base-url:}") String openRouterUrl,
             @Value("${voice.base-url:}") String voiceUrl,
             @Value("${embedding.base-url:}") String embeddingUrl,
-            @Value("${routing.prefer-local:false}") boolean preferLocal) {
+            @Value("${routing.prefer-local:false}") boolean preferLocal, @Value("${routing.allow-simulate-offline:false}") boolean allowSimulateOffline) {
         this.openRouter = openRouter; this.voice = voice; this.embedding = embedding;
         this.openRouterUrl = openRouterUrl; this.voiceUrl = voiceUrl; this.embeddingUrl = embeddingUrl;
-        this.preferLocal = preferLocal;
+        this.preferLocal = preferLocal; this.allowSimulateOffline=allowSimulateOffline;
     }
 
     @Scheduled(fixedDelay = 30_000)
@@ -48,6 +48,6 @@ public class ModelRouter {
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attributes == null) return false;
         HttpServletRequest request = attributes.getRequest();
-        return "true".equalsIgnoreCase(request.getHeader("X-Simulate-Offline"));
+        return allowSimulateOffline && "true".equalsIgnoreCase(request.getHeader("X-Simulate-Offline"));
     }
 }

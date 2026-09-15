@@ -43,7 +43,7 @@ public class JwtService {
 
     private static byte[] secretKeyMaterial(String secret) {
         byte[] bytes = secret.getBytes(StandardCharsets.UTF_8);
-        if (bytes.length >= 32) return bytes;
-        return java.util.Arrays.copyOf(bytes, 32);
+        if ("change-me-in-production".equals(secret) || bytes.length < 32) throw new IllegalStateException("JWT_SECRET must be at least 32 bytes and must not use the default");
+        return bytes;
     }
 }
