@@ -14,18 +14,23 @@ import static org.mockito.Mockito.when;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
 
 @SpringBootTest
 @Testcontainers
 class MemoryServicePgVectorIntegrationTest {
     @Container
-    static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("pgvector/pgvector:pg18")
-            .asCompatibleSubstituteFor("postgres");
+    @ServiceConnection // Automatically wires spring.datasource properties in Spring Boot 3.1+
+    static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(
+            DockerImageName.parse("pgvector/pgvector:pg17")
+                    .asCompatibleSubstituteFor("postgres")
+    );
 
     @DynamicPropertySource
     static void databaseProperties(DynamicPropertyRegistry registry) {
@@ -38,7 +43,8 @@ class MemoryServicePgVectorIntegrationTest {
     @Autowired private CompanionProfileRepository profiles;
     @Autowired private CompanionMemoryRepository memories;
     @Autowired private MemoryService memoryService;
-    @MockBean private EmbeddingService embeddingService;
+    @MockBean
+    private EmbeddingService embeddingService;
 
     @Test
     void ordersMemoriesByPgVectorCosineDistance() {
