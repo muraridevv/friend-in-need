@@ -16,6 +16,7 @@ public class EmbeddingService {
         if (properties.apiKey() == null || properties.apiKey().isBlank()) return new float[0];
         JsonNode response=client.post().uri("v1/embeddings").header(HttpHeaders.AUTHORIZATION,"Bearer "+properties.apiKey())
                 .body(Map.of("model",properties.model(),"input",text)).retrieve().body(JsonNode.class);
+        if (response == null) return new float[0];
         JsonNode values=response.path("data").path(0).path("embedding"); float[] result=new float[values.size()];
         for (int index=0; index<values.size(); index++) result[index]=(float) values.get(index).asDouble();
         return result;

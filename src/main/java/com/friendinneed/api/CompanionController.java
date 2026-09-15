@@ -33,7 +33,7 @@ public class CompanionController {
     @PostMapping("/profiles/{id}/face") ProfileView enroll(@PathVariable UUID id,@Valid @RequestBody FaceRequest request) { var p=profile(id); log.info("Enrolling face templates: profileId={}, templateCount={}", id, request.descriptor().split("\\|").length); p.enrollFace(request.descriptor()); return ProfileView.of(profiles.save(p)); }
     @PostMapping("/profiles/{id}/face/verify") FaceVerification verify(@PathVariable UUID id,@Valid @RequestBody FaceRequest request) { var match=profile(id).faceMatch(request.descriptor()); log.info("Face verification completed: profileId={}, recognized={}, confidence={}", id, match.recognized(), match.confidence()); return new FaceVerification(match.recognized(), match.confidence()); }
     @PostMapping("/profiles/recognize") Recognition recognize(@Valid @RequestBody FaceRequest request) {
-        return profiles.findAll().stream()
+        return profiles.findByFaceFingerprintIsNotNull().stream()
                 .map(candidate -> new RecognizedCandidate(candidate, candidate.faceMatch(request.descriptor())))
                 .filter(candidate -> candidate.match().recognized())
                 .max(Comparator.comparingLong(candidate -> candidate.match().confidence()))
@@ -44,7 +44,7 @@ public class CompanionController {
     void remember(@PathVariable UUID id, @Valid @RequestBody MemoryRequest request) { profile(id); memory.remember(id,request.content(),request.importance()); }
     @GetMapping("/profiles/{id}/calendar") List<CalendarView> calendar(@PathVariable UUID id) { return calendar.upcoming(profile(id).getId()).stream().map(CalendarView::of).toList(); }
     @PostMapping("/profiles/{id}/calendar") @ResponseStatus(HttpStatus.CREATED)
-    CalendarView createEvent(@PathVariable UUID id,@Valid @RequestBody EventRequest request) { profile(id); return CalendarView.of(calendar.create(id,request.title(),request.startsAt(),request.endsAt())); }
+    CalendarView createEvent(@PathVariable UUID id,@Valid @RequestBody EventRequest request) { if (request.endsAt() != null && request.endsAt().isBefore(request.startsAt())) throw new IllegalArgumentException("endsAt must be after startsAt"); profile(id); return CalendarView.of(calendar.create(id,request.title(),request.startsAt(),request.endsAt())); }
     @GetMapping("/profiles/{id}/briefing") Briefing briefing(@PathVariable UUID id) { var p=profile(id); return new Briefing(weather.current(p.getLocation()),calendar.upcoming(id).stream().map(CalendarView::of).toList()); }
     private CompanionProfile profile(UUID id) { return profiles.findById(id).orElseThrow(()->new NoSuchElementException("Profile not found")); }
     record CreateProfile(@NotBlank @Size(max=80) String displayName,@NotBlank @Size(max=2000) String personality,@Size(max=1000) String interests,@NotBlank @Size(max=80) String timezone,@NotBlank @Size(max=120) String location) { }

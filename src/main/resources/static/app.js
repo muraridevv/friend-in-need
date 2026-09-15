@@ -39,7 +39,7 @@ form.addEventListener('submit', async (event) => {
   const values = new FormData(form);
   try {
     profile = await api('/profiles', { displayName: values.get('displayName'), personality: values.get('personality'), interests: values.get('interests'), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, location: values.get('location') });
-    localStorage.setItem('fin-profile', JSON.stringify(profile)); updateProfile(); dialog.close();
+    updateProfile(); dialog.close();
   } catch (error) { alert(error.message); }
 });
 $('#composer').addEventListener('submit', async (event) => {
@@ -91,8 +91,8 @@ $('#camera-capture').onclick = async () => {
   const capture = $('#camera-capture'); capture.disabled = true;
   try {
     const descriptor = await captureFaceTemplates(cameraPurpose === 'enroll' ? 3 : 2);
-    if (cameraPurpose === 'enroll') { profile = await api(`/profiles/${profile.id}/face`, { descriptor }); localStorage.setItem('fin-profile', JSON.stringify(profile)); updateProfile(); $('#camera-status').textContent = 'Enrollment complete.'; }
-    else if (cameraPurpose === 'login') { const result = await api('/profiles/recognize', { descriptor }); if (!result.recognized) { $('#camera-status').textContent = 'No enrolled profile matched. Try again or create a new profile.'; capture.disabled = false; return; } profile = result.profile; localStorage.setItem('fin-profile', JSON.stringify(profile)); updateProfile(); $('#camera-status').textContent = `Welcome back, ${profile.displayName}! Similarity: ${result.confidence}%`; }
+    if (cameraPurpose === 'enroll') { profile = await api(`/profiles/${profile.id}/face`, { descriptor }); updateProfile(); $('#camera-status').textContent = 'Enrollment complete.'; }
+    else if (cameraPurpose === 'login') { const result = await api('/profiles/recognize', { descriptor }); if (!result.recognized) { $('#camera-status').textContent = 'No enrolled profile matched. Try again or create a new profile.'; capture.disabled = false; return; } profile = result.profile; updateProfile(); $('#camera-status').textContent = `Welcome back, ${profile.displayName}! Similarity: ${result.confidence}%`; }
     else { const result = await api(`/profiles/${profile.id}/face/verify`, { descriptor }); $('#camera-status').textContent = result.recognized ? `Welcome back! Face similarity: ${result.confidence}%` : `No match (${result.confidence}%). Keep centered and capture again.`; if (!result.recognized) { capture.disabled = false; return; } }
     setTimeout(closeFaceCamera, 900);
   } catch (error) { $('#camera-status').textContent = error.message; capture.disabled = false; }

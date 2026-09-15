@@ -12,8 +12,10 @@ public class CompanionService {
  @Transactional public Reply talk(UUID profileId, String text, String context) {
   log.info("Starting companion turn: profileId={}, inputLength={}", profileId, text.length());
   CompanionProfile profile=profiles.findById(profileId).orElseThrow(() -> new NoSuchElementException("Profile not found"));
-  messages.save(new ConversationMessage(profileId, MessageRole.USER, text));
-  String history=messages.findTop12ByProfileIdOrderByCreatedAtDesc(profileId).stream().filter(m -> m.getRole()!=MessageRole.USER || !m.getContent().equals(text)).limit(10).map(m -> m.getRole()+": "+m.getContent()).collect(Collectors.joining("\n"));
+  ConversationMessage userMessage=messages.save(new ConversationMessage(profileId, MessageRole.USER, text));
+  List<ConversationMessage> recentMessages=new ArrayList<>(messages.findTop12ByProfileIdOrderByCreatedAtDesc(profileId));
+  Collections.reverse(recentMessages);
+  String history=recentMessages.stream().filter(m -> !m.getId().equals(userMessage.getId())).limit(10).map(m -> m.getRole()+": "+m.getContent()).collect(Collectors.joining("\n"));
   String memories=memory.relevantTo(profileId, text);
   String system="You are a supportive AI companion, not a therapist or emergency service. Be warm, concise, and curious. " +
    "Your person's name is "+profile.getDisplayName()+". Companion personality: "+profile.getPersonality()+". Interests: "+profile.getInterests()+". " +
