@@ -3,6 +3,10 @@ const dialog = $('#profile-dialog');
 const form = $('#profile-form');
 const messages = $('#messages');
 const identityDialog = $('#identity-dialog');
+const authForm = $('#auth-form');
+let jwt;
+const nativeFetch = window.fetch.bind(window);
+window.fetch = (input, init = {}) => { const headers = new Headers(init.headers || {}); if (jwt && !headers.has("Authorization")) headers.set("Authorization", `Bearer ${jwt}`); return nativeFetch(input, { ...init, headers }); };
 // Do not restore the prior browser user: every fresh page load requires a face login or profile creation.
 let profile = null;
 let notifications;
@@ -58,14 +62,16 @@ async function speak(text) {
     await audio.play();
   } catch { /* Voice provider is optional; text remains available. */ }
 }
+authForm.addEventListener('submit', async (event) => { event.preventDefault(); const values = new FormData(authForm); try { const response = await nativeFetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: values.get('username'), password: values.get('password') }) }); jwt = (await responseJson(response)).token; $('#auth-error').textContent = ''; $('#recognize-login').focus(); } catch (error) { $('#auth-error').textContent = error.message; } });
+$('#register').onclick = async () => { const values = new FormData(authForm); try { const response = await nativeFetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: values.get('username'), password: values.get('password') }) }); jwt = (await responseJson(response)).token; $('#auth-error').textContent = ''; $('#recognize-login').focus(); } catch (error) { $('#auth-error').textContent = error.message; } };
 $('#show').onclick = async () => { if (!presenceCanvas) return; presenceCanvas.toBlob(async blob => { const form = new FormData(); form.append('image', blob, 'show.jpg'); form.append('prompt', 'Describe what you see'); const result = await responseJson(await fetch('/api/vision/describe', { method:'POST', body:form })); bubble(result.description, 'companion proactive', 'What Nova sees'); $('#message').value = `I'm showing you something: ${result.description}`; $('#composer').requestSubmit(); }, 'image/jpeg'); };
 $('#hands-free').onclick = () => { handsFree = !handsFree; $('#hands-free').classList.toggle('active', handsFree); if (handsFree) setupVad(); };
 $('#mic').onclick = () => { startVoiceTurn(); setupVad(); window.voiceVad?.start(); };
 $('#menu').onclick = () => document.querySelector('aside').classList.toggle('open');
 $('#settings').onclick = () => dialog.showModal();
 $('#switch-user').onclick = () => { if (presenceInterval) clearInterval(presenceInterval); presenceStream?.getTracks().forEach(track => track.stop()); presenceStream=undefined; notifications?.close(); notifications=undefined; profile=null; identityDialog.showModal(); };
-$('#recognize-login').onclick = () => { identityDialog.close(); openFaceCamera('login'); };
-$('#create-profile').onclick = () => { identityDialog.close(); dialog.showModal(); };
+$('#recognize-login').onclick = () => { if (!jwt) { $('#auth-error').textContent = 'Sign in first.'; return; } identityDialog.close(); openFaceCamera('login'); };
+$('#create-profile').onclick = () => { if (!jwt) { $('#auth-error').textContent = 'Sign in first.'; return; } identityDialog.close(); dialog.showModal(); };
 form.addEventListener('submit', async (event) => {
   event.preventDefault(); if (event.submitter?.value === 'cancel') return;
   const values = new FormData(form);
