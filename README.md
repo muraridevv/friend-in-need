@@ -18,3 +18,7 @@ Voice uses browser speech APIs. Camera enrollment stores compact face templates,
 ## Model configuration
 
 Three independently configured models are used: `OPENROUTER_MODEL` for conversation, `EMBEDDING_MODEL` for RAG memory, and `VOICE_STT_MODEL` / `VOICE_TTS_MODEL` for speech. Voice must use a separate OpenAI-compatible provider via `VOICE_API_BASE_URL`; it is never sent to OpenRouter. Copy the values from `.env.example` before enabling voice.
+
+## API documentation
+
+After startup, interactive Swagger UI is available at [`/swagger-ui/index.html`](http://localhost:8080/swagger-ui/index.html). The OpenAPI document is served from [`/v3/api-docs`](http://localhost:8080/v3/api-docs).

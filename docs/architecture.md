@@ -27,3 +27,7 @@ The current project delivers local calendar events, live weather through Open-Me
 The conversation model remains the OpenRouter-configured Spring AI chat model. `EmbeddingService` uses a separately configured embedding model and stores its vector with each consented memory; retrieval uses cosine similarity and falls back to lexical ranking if the embedding provider is unavailable. `VoiceService` is a separate OpenAI-compatible STT/TTS adapter with its own `VOICE_*` base URL and key—OpenRouter is never used for audio. The browser records audio with `MediaRecorder`, uploads it for transcription, and plays the returned synthesis audio.
 
 Face enrollment now creates a three 32×32 normalized luminance templates from a detected face (when the browser supports `FaceDetector`), and server-side verification uses Hamming similarity rather than exact-frame equality. This is still an intentional convenience signal, not authentication or identity-grade biometrics.
+
+## API observability and documentation
+
+Springdoc publishes OpenAPI at `/v3/api-docs` and Swagger UI at `/swagger-ui/index.html`. Voice logs identify the resolved provider base URL and the exact STT/TTS endpoint shape without logging API keys, audio, or text. For OpenAI specifically, a bare `https://api.openai.com` base URL is normalized to `https://api.openai.com/v1/` so the audio routes do not fail from a missing API version segment.

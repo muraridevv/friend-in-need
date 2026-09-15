@@ -5,6 +5,8 @@ const messages = $('#messages');
 let profile = JSON.parse(localStorage.getItem('fin-profile') || 'null');
 let recorder;
 let recording = false;
+let cameraStream;
+let cameraPurpose;
 
 function updateProfile() {
   $('#profile-name').textContent = profile ? profile.displayName : 'Getting to know you';
