@@ -1,0 +1,37 @@
+spring:
+  application.name: friend-in-need
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/friendinneed}
+    username: ${DATABASE_USER:friend}
+    password: ${DATABASE_PASSWORD:friend}
+  jpa:
+    hibernate.ddl-auto: validate
+    open-in-view: false
+  ai:
+    openai:
+      base-url: ${OPENROUTER_BASE_URL:https://openrouter.ai/api}
+      api-key: ${OPENROUTER_API_KEY:}
+      chat:
+        options:
+          model: ${OPENROUTER_MODEL:openai/gpt-4.1-mini}
+          temperature: 0.75
+server.error.include-message: never
+companion:
+  proactive-cron: ${PROACTIVE_CRON:0 0 9 * * *}
+  public-url: ${PUBLIC_URL:http://localhost:8080}
+management.endpoints.web.exposure.include: health,info
+embedding:
+  base-url: ${EMBEDDING_BASE_URL:https://openrouter.ai/api}
+  api-key: ${EMBEDDING_API_KEY:}
+  model: ${EMBEDDING_MODEL:openai/text-embedding-3-small}
+voice:
+  base-url: ${VOICE_API_BASE_URL:}
+  api-key: ${VOICE_API_KEY:}
+  stt-model: ${VOICE_STT_MODEL:gpt-4o-mini-transcribe}
+  tts-model: ${VOICE_TTS_MODEL:gpt-4o-mini-tts}
+  tts-voice: ${VOICE_TTS_VOICE:alloy}
+logging:
+  level:
+    com.friendinneed: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [%thread] %logger{36} - %msg%n"
