@@ -9,6 +9,7 @@ import java.util.UUID;
 @Entity
 public class CompanionProfile {
     @Id private UUID id;
+    @Column(name = "user_id") private UUID userId;
     private String displayName;
     @Column(columnDefinition = "text") private String personality;
     @Column(columnDefinition = "text") private String interests;
@@ -20,7 +21,8 @@ public class CompanionProfile {
 
     protected CompanionProfile() { }
 
-    public CompanionProfile(String displayName, String personality, String interests, String timezone, String location) {
+    public CompanionProfile(UUID userId, String displayName, String personality, String interests, String timezone, String location) {
+        this.userId = userId;
         this.id = UUID.randomUUID();
         this.displayName = displayName;
         this.personality = personality;
@@ -29,7 +31,11 @@ public class CompanionProfile {
         this.location = location;
         this.createdAt = Instant.now();
     }
+    public CompanionProfile(String displayName, String personality, String interests, String timezone, String location) {
+        this(null, displayName, personality, interests, timezone, location);
+    }
     public UUID getId() { return id; }
+    public UUID getUserId() { return userId; }
     public String getDisplayName() { return displayName; }
     public String getPersonality() { return personality; }
     public String getInterests() { return interests; }

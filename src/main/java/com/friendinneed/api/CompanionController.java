@@ -8,6 +8,8 @@ import com.friendinneed.integration.WeatherService;
 import com.friendinneed.memory.MemoryService;
 import com.friendinneed.profile.CompanionProfile;
 import com.friendinneed.profile.CompanionProfileRepository;
+import com.friendinneed.security.UserEntity;
+import com.friendinneed.security.UserRepository;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -22,6 +24,9 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -43,6 +48,7 @@ public class CompanionController {
     private final CalendarService calendar;
     private final MemoryService memory;
     private final CompanionProfileRepository profiles;
+    private final UserRepository users;
 
     public CompanionController(
             CompanionService companion,
@@ -50,19 +56,21 @@ public class CompanionController {
             WeatherService weather,
             CalendarService calendar,
             MemoryService memory,
-            CompanionProfileRepository profiles) {
+            CompanionProfileRepository profiles,
+            UserRepository users) {
         this.companion = companion;
         this.context = context;
         this.weather = weather;
         this.calendar = calendar;
         this.memory = memory;
         this.profiles = profiles;
+        this.users = users;
     }
 
     @PostMapping("/profiles")
     @ResponseStatus(HttpStatus.CREATED)
     ProfileView create(@Valid @RequestBody CreateProfile body) {
-        return ProfileView.of(profiles.save(new CompanionProfile(
+        return ProfileView.of(profiles.save(new CompanionProfile(currentUser().getId(),
                 body.displayName(), body.personality(), body.interests(), body.timezone(), body.location())));
     }
 
@@ -107,7 +115,7 @@ public class CompanionController {
 
     @PostMapping("/profiles/recognize")
     Recognition recognize(@Valid @RequestBody FaceRequest request) {
-        return profiles.findByFaceFingerprintIsNotNull().stream()
+        return profiles.findByUserIdAndFaceFingerprintIsNotNull(currentUser().getId()).stream()
                 .map(candidate -> new RecognizedCandidate(candidate, candidate.faceMatch(request.descriptor())))
                 .filter(candidate -> candidate.match().recognized())
                 .max(Comparator.comparingLong(candidate -> candidate.match().confidence()))
@@ -150,7 +158,15 @@ public class CompanionController {
     }
 
     private CompanionProfile profile(UUID id) {
-        return profiles.findById(id).orElseThrow(() -> new NoSuchElementException("Profile not found"));
+        CompanionProfile profile = profiles.findById(id).orElseThrow(() -> new NoSuchElementException("Profile not found"));
+        if (!currentUser().getId().equals(profile.getUserId())) throw new AccessDeniedException("Profile does not belong to the authenticated user");
+        return profile;
+    }
+
+    private UserEntity currentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getName() == null) throw new AccessDeniedException("Authentication is required");
+        return users.findByUsername(authentication.getName()).orElseThrow(() -> new AccessDeniedException("Authenticated user was not found"));
     }
 
     record CreateProfile(

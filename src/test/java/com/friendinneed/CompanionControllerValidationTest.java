@@ -7,10 +7,12 @@ import com.friendinneed.integration.ContextService;
 import com.friendinneed.integration.WeatherService;
 import com.friendinneed.memory.MemoryService;
 import com.friendinneed.profile.CompanionProfileRepository;
+import com.friendinneed.security.UserRepository;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -19,6 +21,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = CompanionController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class CompanionControllerValidationTest {
     @Autowired
     private MockMvc mockMvc;
@@ -28,6 +31,7 @@ class CompanionControllerValidationTest {
     @MockBean private CalendarService calendar;
     @MockBean private MemoryService memory;
     @MockBean private CompanionProfileRepository profiles;
+    @MockBean private UserRepository users;
 
     @Test
     void testCreateProfileBlankName() throws Exception {
