@@ -18,6 +18,7 @@ public class CompanionProfile {
     private String faceFingerprint;
     private Instant faceEnrolledAt;
     private Instant createdAt;
+    private boolean proactiveEnabled;
 
     protected CompanionProfile() { }
 
@@ -36,6 +37,8 @@ public class CompanionProfile {
     }
     public UUID getId() { return id; }
     public UUID getUserId() { return userId; }
+    public boolean isProactiveEnabled() { return proactiveEnabled; }
+    public void setProactiveEnabled(boolean proactiveEnabled) { this.proactiveEnabled = proactiveEnabled; }
     public String getDisplayName() { return displayName; }
     public String getPersonality() { return personality; }
     public String getInterests() { return interests; }

@@ -7,4 +7,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface CompanionProfileRepository extends JpaRepository<CompanionProfile, UUID> {
     List<CompanionProfile> findByFaceFingerprintIsNotNull();
     List<CompanionProfile> findByUserIdAndFaceFingerprintIsNotNull(UUID userId);
+    List<CompanionProfile> findByProactiveEnabledTrue();
 }

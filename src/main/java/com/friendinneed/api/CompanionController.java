@@ -92,6 +92,13 @@ public class CompanionController {
         profiles.delete(profile(id));
     }
 
+    @PutMapping("/profiles/{id}/settings")
+    ProfileView settings(@PathVariable UUID id, @Valid @RequestBody SettingsRequest body) {
+        CompanionProfile profile = profile(id);
+        profile.setProactiveEnabled(body.proactiveEnabled());
+        return ProfileView.of(profiles.save(profile));
+    }
+
     @PostMapping("/chat")
     CompanionService.Reply chat(@Valid @RequestBody ChatRequest body) {
         CompanionProfile profile = profile(body.profileId());
@@ -176,6 +183,8 @@ public class CompanionController {
             @NotBlank @Size(max = 80) String timezone,
             @NotBlank @Size(max = 120) String location) { }
 
+    record SettingsRequest(boolean proactiveEnabled) { }
+
     record ChatRequest(@NotNull UUID profileId, @NotBlank @Size(max = 6000) String message) { }
 
     record FaceRequest(@NotBlank @Size(min = 64, max = 4096) String descriptor) { }
@@ -205,7 +214,8 @@ public class CompanionController {
             String interests,
             String timezone,
             String location,
-            boolean faceEnrolled) {
+            boolean faceEnrolled,
+            boolean proactiveEnabled) {
         static ProfileView of(CompanionProfile profile) {
             return new ProfileView(
                     profile.getId(),
@@ -214,7 +224,8 @@ public class CompanionController {
                     profile.getInterests(),
                     profile.getTimezone(),
                     profile.getLocation(),
-                    profile.hasFaceEnrollment());
+                    profile.hasFaceEnrollment(),
+                    profile.isProactiveEnabled());
         }
     }
 }

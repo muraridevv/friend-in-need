@@ -5,6 +5,7 @@ const messages = $('#messages');
 const identityDialog = $('#identity-dialog');
 // Do not restore the prior browser user: every fresh page load requires a face login or profile creation.
 let profile = null;
+let notifications;
 let recorder;
 let recording = false;
 let cameraStream;
@@ -20,7 +21,8 @@ async function responseJson(response) {
   throw new Error(error.error || 'Something went wrong');
 }
 async function api(path, body) { return responseJson(await fetch(`/api${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })); }
-function bubble(text, who) { const node = document.createElement('article'); node.className = `bubble ${who}`; node.textContent = text; messages.append(node); messages.scrollTop = messages.scrollHeight; return node; }
+function bubble(text, who, label) { const node = document.createElement('article'); node.className = `bubble ${who}`; if (label) { const tag = document.createElement('small'); tag.className = 'bubble-label'; tag.textContent = label; node.append(tag); } node.append(document.createTextNode(text)); messages.append(node); messages.scrollTop = messages.scrollHeight; return node; }
+function openNotifications() { if (notifications) notifications.close(); if (!profile) return; notifications = new EventSource(`/api/profiles/${profile.id}/notifications`); notifications.addEventListener('proactive', (event) => bubble(event.data, 'companion proactive', 'Nova checked in')); }
 async function speak(text) {
   try {
     const response = await fetch('/api/voice/speech', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) });
@@ -39,7 +41,8 @@ form.addEventListener('submit', async (event) => {
   const values = new FormData(form);
   try {
     profile = await api('/profiles', { displayName: values.get('displayName'), personality: values.get('personality'), interests: values.get('interests'), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, location: values.get('location') });
-    updateProfile(); dialog.close();
+    if (values.get('proactiveEnabled') === 'on') profile = await responseJson(await fetch(`/api/profiles/${profile.id}/settings`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ proactiveEnabled: true }) }));
+    updateProfile(); openNotifications(); dialog.close();
   } catch (error) { alert(error.message); }
 });
 $('#composer').addEventListener('submit', async (event) => {
@@ -92,9 +95,9 @@ $('#camera-capture').onclick = async () => {
   try {
     const descriptor = await captureFaceTemplates(cameraPurpose === 'enroll' ? 3 : 2);
     if (cameraPurpose === 'enroll') { profile = await api(`/profiles/${profile.id}/face`, { descriptor }); updateProfile(); $('#camera-status').textContent = 'Enrollment complete.'; }
-    else if (cameraPurpose === 'login') { const result = await api('/profiles/recognize', { descriptor }); if (!result.recognized) { $('#camera-status').textContent = 'No enrolled profile matched. Try again or create a new profile.'; capture.disabled = false; return; } profile = result.profile; updateProfile(); $('#camera-status').textContent = `Welcome back, ${profile.displayName}! Similarity: ${result.confidence}%`; }
+    else if (cameraPurpose === 'login') { const result = await api('/profiles/recognize', { descriptor }); if (!result.recognized) { $('#camera-status').textContent = 'No enrolled profile matched. Try again or create a new profile.'; capture.disabled = false; return; } profile = result.profile; updateProfile(); openNotifications(); $('#camera-status').textContent = `Welcome back, ${profile.displayName}! Similarity: ${result.confidence}%`; }
     else { const result = await api(`/profiles/${profile.id}/face/verify`, { descriptor }); $('#camera-status').textContent = result.recognized ? `Welcome back! Face similarity: ${result.confidence}%` : `No match (${result.confidence}%). Keep centered and capture again.`; if (!result.recognized) { capture.disabled = false; return; } }
     setTimeout(closeFaceCamera, 900);
   } catch (error) { $('#camera-status').textContent = error.message; capture.disabled = false; }
 };
-updateProfile(); if (!profile) identityDialog.showModal();
+updateProfile(); openNotifications(); if (!profile) identityDialog.showModal();
