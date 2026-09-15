@@ -5,19 +5,21 @@ import com.friendinneed.calendar.CalendarService;
 import com.friendinneed.conversation.CompanionService;
 import com.friendinneed.conversation.ConversationMessageRepository;
 import com.friendinneed.integration.ContextService;
-import com.friendinneed.integration.WeatherService;
 import com.friendinneed.integration.NewsService;
+import com.friendinneed.integration.WeatherService;
 import com.friendinneed.memory.MemoryService;
 import com.friendinneed.profile.CompanionProfileRepository;
 import com.friendinneed.security.UserRepository;
-import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.UUID;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -27,15 +29,24 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class CompanionControllerValidationTest {
     @Autowired
     private MockMvc mockMvc;
-    @MockBean private CompanionService companion;
-    @MockBean private ConversationMessageRepository messages;
-    @MockBean private ContextService context;
-    @MockBean private WeatherService weather;
-    @MockBean private CalendarService calendar;
-    @MockBean private MemoryService memory;
-    @MockBean private NewsService news;
-    @MockBean private CompanionProfileRepository profiles;
-    @MockBean private UserRepository users;
+    @MockBean
+    private CompanionService companion;
+    @MockBean
+    private ConversationMessageRepository messages;
+    @MockBean
+    private ContextService context;
+    @MockBean
+    private WeatherService weather;
+    @MockBean
+    private CalendarService calendar;
+    @MockBean
+    private MemoryService memory;
+    @MockBean
+    private NewsService news;
+    @MockBean
+    private CompanionProfileRepository profiles;
+    @MockBean
+    private UserRepository users;
 
     @Test
     void testCreateProfileBlankName() throws Exception {

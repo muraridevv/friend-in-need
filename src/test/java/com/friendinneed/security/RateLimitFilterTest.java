@@ -1,8 +1,6 @@
 package com.friendinneed.security;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -10,11 +8,17 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 class RateLimitFilterTest {
     private final RateLimitFilter filter = new RateLimitFilter(new ObjectMapper());
 
     @AfterEach
-    void clearSecurityContext() { SecurityContextHolder.clearContext(); }
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
 
     @Test
     void rejectsTwentyFirstChatRequestForUser() throws Exception {

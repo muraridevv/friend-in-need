@@ -3,47 +3,37 @@ package com.friendinneed.api;
 import com.friendinneed.calendar.CalendarEvent;
 import com.friendinneed.calendar.CalendarService;
 import com.friendinneed.conversation.CompanionService;
-import com.friendinneed.conversation.ConversationMessageRepository;
 import com.friendinneed.conversation.ConversationMessage;
+import com.friendinneed.conversation.ConversationMessageRepository;
 import com.friendinneed.integration.ContextService;
-import com.friendinneed.integration.WeatherService;
 import com.friendinneed.integration.NewsService;
+import com.friendinneed.integration.WeatherService;
 import com.friendinneed.memory.MemoryService;
+import com.friendinneed.memory.OfflineQueue;
 import com.friendinneed.profile.CompanionProfile;
 import com.friendinneed.profile.CompanionProfileRepository;
+import com.friendinneed.routing.ModelRouter;
 import com.friendinneed.security.UserEntity;
 import com.friendinneed.security.UserRepository;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.codec.ServerSentEvent;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
+
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.RequestParam;
-import reactor.core.publisher.Flux;
-import org.springframework.http.codec.ServerSentEvent;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api")
@@ -59,6 +49,8 @@ public class CompanionController {
     private final CompanionProfileRepository profiles;
     private final UserRepository users;
     private final ConversationMessageRepository messages;
+    private final ModelRouter modelRouter;
+    private final OfflineQueue offlineQueue;
 
     public CompanionController(
             CompanionService companion,
@@ -69,7 +61,9 @@ public class CompanionController {
             NewsService news,
             CompanionProfileRepository profiles,
             UserRepository users,
-            ConversationMessageRepository messages) {
+            ConversationMessageRepository messages,
+            ModelRouter modelRouter,
+            OfflineQueue offlineQueue) {
         this.companion = companion;
         this.context = context;
         this.weather = weather;
@@ -79,6 +73,13 @@ public class CompanionController {
         this.profiles = profiles;
         this.users = users;
         this.messages = messages;
+        this.modelRouter = modelRouter;
+        this.offlineQueue = offlineQueue;
+    }
+
+    @GetMapping("/system/status")
+    java.util.Map<String, String> systemStatus() {
+        return modelRouter.status(offlineQueue.depth() > 0);
     }
 
     @PostMapping("/profiles")
@@ -118,7 +119,8 @@ public class CompanionController {
         CompanionProfile profile = profile(profileId);
         StringBuilder complete = new StringBuilder();
         return companion.talkStreaming(profileId, message, context.relevantContext(profile)).map(token -> {
-            complete.append(token); return ServerSentEvent.builder(java.util.Map.<String, Object>of("token", token)).build();
+            complete.append(token);
+            return ServerSentEvent.builder(java.util.Map.<String, Object>of("token", token)).build();
         }).concatWith(Flux.defer(() -> Flux.just(ServerSentEvent.builder(java.util.Map.<String, Object>of("done", true, "fullMessage", complete.toString())).build())));
     }
 
@@ -181,7 +183,10 @@ public class CompanionController {
 
     @DeleteMapping("/profiles/{id}/conversations")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    void deleteConversations(@PathVariable UUID id) { profile(id); messages.deleteByProfileId(id); }
+    void deleteConversations(@PathVariable UUID id) {
+        profile(id);
+        messages.deleteByProfileId(id);
+    }
 
     @GetMapping("/profiles/{id}/calendar")
     List<CalendarView> calendar(@PathVariable UUID id) {
@@ -206,13 +211,15 @@ public class CompanionController {
 
     private CompanionProfile profile(UUID id) {
         CompanionProfile profile = profiles.findById(id).orElseThrow(() -> new NoSuchElementException("Profile not found"));
-        if (!currentUser().getId().equals(profile.getUserId())) throw new AccessDeniedException("Profile does not belong to the authenticated user");
+        if (!currentUser().getId().equals(profile.getUserId()))
+            throw new AccessDeniedException("Profile does not belong to the authenticated user");
         return profile;
     }
 
     private UserEntity currentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || authentication.getName() == null) throw new AccessDeniedException("Authentication is required");
+        if (authentication == null || authentication.getName() == null)
+            throw new AccessDeniedException("Authentication is required");
         return users.findByUsername(authentication.getName()).orElseThrow(() -> new AccessDeniedException("Authenticated user was not found"));
     }
 
@@ -221,23 +228,32 @@ public class CompanionController {
             @NotBlank @Size(max = 2000) String personality,
             @Size(max = 1000) String interests,
             @NotBlank @Size(max = 80) String timezone,
-            @NotBlank @Size(max = 120) String location) { }
+            @NotBlank @Size(max = 120) String location) {
+    }
 
-    record SettingsRequest(boolean proactiveEnabled) { }
+    record SettingsRequest(boolean proactiveEnabled) {
+    }
 
-    record ChatRequest(@NotNull UUID profileId, @NotBlank @Size(max = 6000) String message) { }
+    record ChatRequest(@NotNull UUID profileId, @NotBlank @Size(max = 6000) String message) {
+    }
 
-    record FaceRequest(@NotBlank @Size(min = 64, max = 4096) String descriptor) { }
+    record FaceRequest(@NotBlank @Size(min = 64, max = 4096) String descriptor) {
+    }
 
-    record FaceVerification(boolean recognized, long confidence) { }
+    record FaceVerification(boolean recognized, long confidence) {
+    }
 
-    record Recognition(boolean recognized, ProfileView profile, long confidence) { }
+    record Recognition(boolean recognized, ProfileView profile, long confidence) {
+    }
 
-    private record RecognizedCandidate(CompanionProfile profile, CompanionProfile.FaceMatch match) { }
+    private record RecognizedCandidate(CompanionProfile profile, CompanionProfile.FaceMatch match) {
+    }
 
-    record MemoryRequest(@NotBlank @Size(max = 1000) String content, @Min(1) @Max(5) int importance) { }
+    record MemoryRequest(@NotBlank @Size(max = 1000) String content, @Min(1) @Max(5) int importance) {
+    }
 
-    record EventRequest(@NotBlank @Size(max = 160) String title, @NotNull Instant startsAt, Instant endsAt) { }
+    record EventRequest(@NotBlank @Size(max = 160) String title, @NotNull Instant startsAt, Instant endsAt) {
+    }
 
     record CalendarView(UUID id, String title, Instant startsAt, Instant endsAt) {
         static CalendarView of(CalendarEvent event) {
@@ -245,9 +261,12 @@ public class CompanionController {
         }
     }
 
-    record EmotionView(com.friendinneed.conversation.MessageRole role, String content, com.friendinneed.emotion.EmotionLabel emotion, Float emotionConfidence, Instant createdAt) { }
+    record EmotionView(com.friendinneed.conversation.MessageRole role, String content,
+                       com.friendinneed.emotion.EmotionLabel emotion, Float emotionConfidence, Instant createdAt) {
+    }
 
-    record Briefing(String weather, List<CalendarView> events, List<NewsService.NewsItem> headlines) { }
+    record Briefing(String weather, List<CalendarView> events, List<NewsService.NewsItem> headlines) {
+    }
 
     record ProfileView(
             UUID id,

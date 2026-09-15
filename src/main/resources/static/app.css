@@ -14,3 +14,5 @@
 #messages[data-presence="away"]::before{content:"Nova is waiting for you…";font-size:11px;color:#84908a}.companion-idle{animation:breathe 3s infinite}@keyframes breathe{50%{opacity:.55}}
 
 #avatar{width:120px;height:120px;border-radius:50%;border:2px solid #b9ccb7;box-shadow:0 0 16px #b9ccb7;transition:transform .3s}@media(max-width:768px){#avatar{width:100px;height:100px}}
+
+.system-status{display:flex;align-items:center;gap:8px;padding:8px 0;font-size:11px;color:#52655b}.system-status i{width:9px;height:9px;border-radius:50%;background:#e2bd38}.system-status.connected i{background:#4eaf61}.system-status.local i{background:#e2bd38}.system-status.offline i{background:#d84d4d}.dev-toggle{font-size:11px;margin:10px 0 0}

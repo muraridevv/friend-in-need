@@ -1,23 +1,22 @@
 package com.friendinneed.proactive;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import com.friendinneed.calendar.CalendarEvent;
 import com.friendinneed.calendar.CalendarEventRepository;
 import com.friendinneed.conversation.ConversationMessageRepository;
 import com.friendinneed.integration.WeatherService;
 import com.friendinneed.profile.CompanionProfile;
 import com.friendinneed.profile.CompanionProfileRepository;
+import org.junit.jupiter.api.Test;
+import org.springframework.ai.chat.client.ChatClient;
+
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
-import org.junit.jupiter.api.Test;
-import org.springframework.ai.chat.client.ChatClient;
-import static org.mockito.Mockito.mock;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
 
 class ProactiveCheckInTest {
     @Test

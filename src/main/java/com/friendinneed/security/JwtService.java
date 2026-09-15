@@ -3,12 +3,13 @@ package com.friendinneed.security;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Date;
-import javax.crypto.SecretKey;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
 
 @Service
 public class JwtService {
@@ -17,6 +18,13 @@ public class JwtService {
 
     public JwtService(@Value("${jwt.secret:change-me-in-production}") String secret) {
         this.signingKey = Keys.hmacShaKeyFor(secretKeyMaterial(secret));
+    }
+
+    private static byte[] secretKeyMaterial(String secret) {
+        byte[] bytes = secret.getBytes(StandardCharsets.UTF_8);
+        if ("change-me-in-production".equals(secret) || bytes.length < 32)
+            throw new IllegalStateException("JWT_SECRET must be at least 32 bytes and must not use the default");
+        return bytes;
     }
 
     public String generateToken(String username) {
@@ -35,15 +43,11 @@ public class JwtService {
         }
     }
 
-    public String extractUsername(String token) { return parse(token).getSubject(); }
+    public String extractUsername(String token) {
+        return parse(token).getSubject();
+    }
 
     private Claims parse(String token) {
         return Jwts.parser().verifyWith(signingKey).build().parseSignedClaims(token).getPayload();
-    }
-
-    private static byte[] secretKeyMaterial(String secret) {
-        byte[] bytes = secret.getBytes(StandardCharsets.UTF_8);
-        if (bytes.length >= 32) return bytes;
-        return java.util.Arrays.copyOf(bytes, 32);
     }
 }

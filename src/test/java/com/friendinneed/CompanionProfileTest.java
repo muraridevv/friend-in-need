@@ -2,6 +2,7 @@ package com.friendinneed;
 
 import com.friendinneed.profile.CompanionProfile;
 import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class CompanionProfileTest {

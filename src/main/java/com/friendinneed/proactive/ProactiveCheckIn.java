@@ -6,15 +6,19 @@ import com.friendinneed.conversation.ConversationMessageRepository;
 import com.friendinneed.integration.WeatherService;
 import com.friendinneed.profile.CompanionProfile;
 import com.friendinneed.profile.CompanionProfileRepository;
+import com.friendinneed.routing.ModelChoice;
+import com.friendinneed.routing.ModelRouter;
+import com.friendinneed.routing.OllamaAdapter;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ProactiveCheckIn {
@@ -26,12 +30,22 @@ public class ProactiveCheckIn {
     private final NotificationPublisher notifications;
     private final ChatClient chat;
     private final Clock clock;
+    private final ModelRouter router;
+    private final OllamaAdapter ollama;
 
     public ProactiveCheckIn(CompanionProfileRepository profiles, CalendarEventRepository events,
-            ConversationMessageRepository conversations, WeatherService weather, ProactiveMessageRepository messages,
-            NotificationPublisher notifications, ChatClient.Builder chatBuilder, Clock clock) {
-        this.profiles = profiles; this.events = events; this.conversations = conversations; this.weather = weather;
-        this.messages = messages; this.notifications = notifications; this.chat = chatBuilder.build(); this.clock = clock;
+                            ConversationMessageRepository conversations, WeatherService weather, ProactiveMessageRepository messages,
+                            NotificationPublisher notifications, ChatClient.Builder chatBuilder, Clock clock, ModelRouter router, OllamaAdapter ollama) {
+        this.profiles = profiles;
+        this.events = events;
+        this.conversations = conversations;
+        this.weather = weather;
+        this.messages = messages;
+        this.notifications = notifications;
+        this.chat = chatBuilder.build();
+        this.clock = clock;
+        this.router = router;
+        this.ollama = ollama;
     }
 
     @Scheduled(cron = "${companion.proactive-cron}")
@@ -59,7 +73,7 @@ public class ProactiveCheckIn {
         String context = contextFor(profile, now);
         String prompt = "Generate a single warm, brief check-in message for " + profile.getDisplayName()
                 + ". Context: " + context + ". Do not ask more than one question.";
-        String content = chat.prompt().system(prompt).user("Write the check-in now.").call().content();
+        String content = router.routeChat() == ModelChoice.LOCAL ? ollama.talk(prompt, "Write the check-in now.") : chat.prompt().system(prompt).user("Write the check-in now.").call().content();
         ProactiveMessage message = messages.save(new ProactiveMessage(profile.getId(), content, now));
         if (notifications.publish(message)) message.markDelivered(now);
     }
@@ -72,6 +86,10 @@ public class ProactiveCheckIn {
     }
 
     private ZoneId zone(CompanionProfile profile) {
-        try { return ZoneId.of(profile.getTimezone()); } catch (RuntimeException exception) { return ZoneId.of("UTC"); }
+        try {
+            return ZoneId.of(profile.getTimezone());
+        } catch (RuntimeException exception) {
+            return ZoneId.of("UTC");
+        }
     }
 }

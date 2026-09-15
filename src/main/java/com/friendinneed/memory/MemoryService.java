@@ -1,26 +1,35 @@
 package com.friendinneed.memory;
 
 import com.friendinneed.embedding.EmbeddingService;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class MemoryService {
     private final CompanionMemoryRepository memories;
     private final EmbeddingService embeddings;
+    private final OfflineQueue offlineQueue;
 
+    @Autowired
+    public MemoryService(CompanionMemoryRepository memories, EmbeddingService embeddings, OfflineQueue offlineQueue) {
+        this.memories = memories;
+        this.embeddings = embeddings;
+        this.offlineQueue = offlineQueue;
+    }
+
+    /**
+     * Convenience constructor retained for focused unit tests.
+     */
     public MemoryService(CompanionMemoryRepository memories, EmbeddingService embeddings) {
-        this.memories = memories; this.embeddings = embeddings;
+        this(memories, embeddings, new OfflineQueue(memories));
     }
 
     public void remember(UUID profileId, String content, int importance) {
         float[] vector = embeddingFor(content);
-        memories.save(new CompanionMemory(profileId, content, importance, vector.length == 0 ? null : vector));
+        offlineQueue.save(profileId, content, importance, vector.length == 0 ? null : vector);
     }
 
     public String relevantTo(UUID profileId, String query) {
@@ -32,7 +41,11 @@ public class MemoryService {
     }
 
     private float[] embeddingFor(String text) {
-        try { return embeddings.embed(text); } catch (Exception ignored) { return new float[0]; }
+        try {
+            return embeddings.embed(text);
+        } catch (Exception ignored) {
+            return new float[0];
+        }
     }
 
     private List<CompanionMemory> lexicalFallback(UUID profileId, String query) {

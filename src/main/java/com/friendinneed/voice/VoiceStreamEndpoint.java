@@ -1,12 +1,6 @@
 package com.friendinneed.voice;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
@@ -15,8 +9,14 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.BinaryWebSocketHandler;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 @Component
 public class VoiceStreamEndpoint extends BinaryWebSocketHandler {
+    private static final int MAX_AUDIO_BYTES = 10 * 1024 * 1024;
     private final VoiceService voice;
     private final ObjectMapper json;
     private final Map<String, ByteArrayOutputStream> buffers = new ConcurrentHashMap<>();
@@ -37,6 +37,11 @@ public class VoiceStreamEndpoint extends BinaryWebSocketHandler {
         ByteArrayOutputStream buffer = buffers.get(session.getId());
         byte[] bytes = new byte[message.getPayloadLength()];
         message.getPayload().get(bytes);
+        if (buffer.size() + bytes.length > MAX_AUDIO_BYTES) {
+            buffers.remove(session.getId());
+            session.close(org.springframework.web.socket.CloseStatus.POLICY_VIOLATION);
+            return;
+        }
         buffer.write(bytes);
     }
 
