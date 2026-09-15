@@ -20,3 +20,13 @@ companion:
   proactive-cron: ${PROACTIVE_CRON:0 0 9 * * *}
   public-url: ${PUBLIC_URL:http://localhost:8080}
 management.endpoints.web.exposure.include: health,info
+embedding:
+  base-url: ${EMBEDDING_BASE_URL:https://openrouter.ai/api}
+  api-key: ${EMBEDDING_API_KEY:}
+  model: ${EMBEDDING_MODEL:openai/text-embedding-3-small}
+voice:
+  base-url: ${VOICE_API_BASE_URL:}
+  api-key: ${VOICE_API_KEY:}
+  stt-model: ${VOICE_STT_MODEL:gpt-4o-mini-transcribe}
+  tts-model: ${VOICE_TTS_MODEL:gpt-4o-mini-tts}
+  tts-voice: ${VOICE_TTS_VOICE:alloy}

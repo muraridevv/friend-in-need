@@ -21,3 +21,9 @@ The browser implementation derives a tiny camera fingerprint and sends only that
 ## Implemented vertical slice
 
 The current project delivers local calendar events, live weather through Open-Meteo (without a user API key), and a profile memory store. Memory retrieval is deterministic lexical ranking, deliberately keeping the implementation observable and inexpensive. It is a working stepping stone rather than semantic RAG; once a memory corpus grows, substitute the documented pgvector retriever behind `MemoryService`.
+
+## Three-model execution path
+
+The conversation model remains the OpenRouter-configured Spring AI chat model. `EmbeddingService` uses a separately configured embedding model and stores its vector with each consented memory; retrieval uses cosine similarity and falls back to lexical ranking if the embedding provider is unavailable. `VoiceService` is a separate OpenAI-compatible STT/TTS adapter with its own `VOICE_*` base URL and key—OpenRouter is never used for audio. The browser records audio with `MediaRecorder`, uploads it for transcription, and plays the returned synthesis audio.
+
+Face enrollment now creates a 32×32 normalized luminance template from a detected face (when the browser supports `FaceDetector`), and server-side verification uses Hamming similarity rather than exact-frame equality. This is still an intentional convenience signal, not authentication or identity-grade biometrics.

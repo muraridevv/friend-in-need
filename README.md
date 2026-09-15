@@ -14,3 +14,7 @@ The OpenRouter endpoint is configured through Spring AI's OpenAI-compatible clie
 ## Product boundaries
 
 Voice uses browser speech APIs. Camera enrollment stores a compact fingerprint, not an image; it is a demo convenience and **not authentication**. External integrations are intentionally opt-in adapters rather than silent data collection. See [architecture notes](docs/architecture.md).
+
+## Model configuration
+
+Three independently configured models are used: `OPENROUTER_MODEL` for conversation, `EMBEDDING_MODEL` for RAG memory, and `VOICE_STT_MODEL` / `VOICE_TTS_MODEL` for speech. Voice must use a separate OpenAI-compatible provider via `VOICE_API_BASE_URL`; it is never sent to OpenRouter. Copy the values from `.env.example` before enabling voice.

@@ -36,6 +36,11 @@ public class CompanionProfile {
     public String getTimezone() { return timezone; }
     public String getLocation() { return location; }
     public void enrollFace(String fingerprint) { faceFingerprint = fingerprint; faceEnrolledAt = Instant.now(); }
-    public boolean faceMatches(String fingerprint) { return faceFingerprint != null && faceFingerprint.equals(fingerprint); }
+    public boolean faceMatches(String descriptor) {
+        if (faceFingerprint == null || descriptor == null || faceFingerprint.length() != descriptor.length()) return false;
+        int sameBits = 0;
+        for (int index = 0; index < descriptor.length(); index++) if (faceFingerprint.charAt(index) == descriptor.charAt(index)) sameBits++;
+        return (double) sameBits / descriptor.length() >= 0.88;
+    }
     public boolean hasFaceEnrollment() { return faceFingerprint != null; }
 }
