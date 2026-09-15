@@ -10,6 +10,17 @@ let recorder;
 let recording = false;
 let cameraStream;
 let cameraPurpose;
+let voiceSocket, handsFree = false, audioQueue = [], playingAudio, speechStartedAt;
+const latency = {};
+function showLatency() { $("#latency-values").textContent = Object.entries(latency).map(([k,v]) => `${k}: ${Math.round(v)}ms`).join("\n"); }
+function checkWakeWord(audioBuffer) { /* Replace with Porcupine.js or a custom wake-word model */ return true; }
+class SentenceChunker { constructor(onSentence) { this.value = ""; this.onSentence = onSentence; } push(token) { this.value += token; const parts = this.value.split(/(?<=[.!?])\s+|\n/); this.value = parts.pop(); parts.filter(Boolean).forEach(this.onSentence); } finish() { if (this.value.trim()) this.onSentence(this.value); this.value = ""; } }
+function stopTalking() { if (playingAudio) { playingAudio.pause(); playingAudio = null; } audioQueue.forEach(url => URL.revokeObjectURL(url)); audioQueue = []; document.querySelectorAll(".bubble.companion").forEach(b => { if (!b.textContent.includes("(interrupted)")) b.append(" (interrupted)"); }); }
+async function queueSentence(sentence) { const started = performance.now(); const response = await fetch("/api/voice/speech", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({text:sentence}) }); if (!response.ok) return; const url = URL.createObjectURL(await response.blob()); audioQueue.push(url); if (!playingAudio) playNext(started); }
+function playNext(started) { const url = audioQueue.shift(); if (!url) { playingAudio = null; return; } playingAudio = new Audio(url); playingAudio.onplay=()=>{latency["TTS first sentence"] = performance.now()-started; showLatency();}; playingAudio.onended=()=>{URL.revokeObjectURL(url); playNext(started);}; playingAudio.play(); }
+function startVoiceTurn() { stopTalking(); speechStartedAt=performance.now(); voiceSocket = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/voice`); voiceSocket.onmessage=(event)=>{const data=JSON.parse(event.data); if(data.final){ $("#message").value=data.transcript; latency["STT total"]=performance.now()-speechStartedAt; showLatency(); $("#composer").requestSubmit(); }}; }
+function endVoiceTurn() { if (voiceSocket?.readyState === WebSocket.OPEN) voiceSocket.send("end"); }
+async function setupVad() { if (!window.vad) return; try { const vad = await vad.MicVAD.new({ onSpeechStart:()=>{ $("#voice-dot").classList.add("active"); if (!voiceSocket && checkWakeWord()) startVoiceTurn(); }, onSpeechEnd:(audio)=>{ $("#voice-dot").classList.remove("active"); if (voiceSocket?.readyState === WebSocket.OPEN) { const pcm=new Int16Array(audio.length); audio.forEach((v,i)=>pcm[i]=Math.max(-1,Math.min(1,v))*32767); voiceSocket.send(pcm.buffer); endVoiceTurn(); voiceSocket=null; } } }); if(handsFree) vad.start(); window.voiceVad=vad; } catch(error) { console.warn("VAD unavailable", error); } }
 
 function updateProfile() {
   $('#profile-name').textContent = profile ? profile.displayName : 'Getting to know you';
@@ -32,6 +43,8 @@ async function speak(text) {
     await audio.play();
   } catch { /* Voice provider is optional; text remains available. */ }
 }
+$('#hands-free').onclick = () => { handsFree = !handsFree; $('#hands-free').classList.toggle('active', handsFree); if (handsFree) setupVad(); };
+$('#mic').onclick = () => { startVoiceTurn(); setupVad(); window.voiceVad?.start(); };
 $('#menu').onclick = () => document.querySelector('aside').classList.toggle('open');
 $('#settings').onclick = () => dialog.showModal();
 $('#switch-user').onclick = () => identityDialog.showModal();
@@ -50,7 +63,7 @@ form.addEventListener('submit', async (event) => {
 $('#composer').addEventListener('submit', async (event) => {
   event.preventDefault(); const input = $('#message'); const text = input.value.trim(); if (!text) return; if (!profile) return dialog.showModal();
   bubble(text, 'user'); input.value = ''; const pending = bubble('Thinking…', 'companion');
-  try { const response = await fetch(`/api/chat/stream?profileId=${encodeURIComponent(profile.id)}&message=${encodeURIComponent(text)}`); if (!response.ok) throw new Error('Streaming failed'); const reader = response.body.getReader(); const decoder = new TextDecoder(); let full = ''; while (true) { const { value, done } = await reader.read(); if (done) break; for (const line of decoder.decode(value, { stream: true }).split('\n')) if (line.startsWith('data: ')) { const event = JSON.parse(line.slice(6)); if (event.token) { full += event.token; pending.textContent = full; } if (event.done) { pending.textContent = event.fullMessage; speak(event.fullMessage); } } } } catch (error) { pending.textContent = `I’m having trouble connecting: ${error.message}`; }
+  try { const response = await fetch(`/api/chat/stream?profileId=${encodeURIComponent(profile.id)}&message=${encodeURIComponent(text)}`); if (!response.ok) throw new Error('Streaming failed'); const reader = response.body.getReader(); const decoder = new TextDecoder(); let full = ''; const chunker = new SentenceChunker(queueSentence); const llmStarted = performance.now(); while (true) { const { value, done } = await reader.read(); if (done) break; for (const line of decoder.decode(value, { stream: true }).split('\n')) if (line.startsWith('data: ')) { const event = JSON.parse(line.slice(6)); if (event.token) { full += event.token; pending.textContent = full; chunker.push(event.token); if (!latency['LLM first token']) { latency['LLM first token'] = performance.now()-llmStarted; showLatency(); } } if (event.done) { pending.textContent = event.fullMessage; chunker.finish(); } } } } catch (error) { pending.textContent = `I’m having trouble connecting: ${error.message}`; }
 });
 $('#mic').onclick = async () => {
   if (recording) { recorder.stop(); return; }
