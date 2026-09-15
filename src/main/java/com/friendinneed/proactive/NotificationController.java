@@ -3,19 +3,18 @@ package com.friendinneed.proactive;
 import com.friendinneed.profile.CompanionProfile;
 import com.friendinneed.profile.CompanionProfileRepository;
 import com.friendinneed.security.UserRepository;
-
-import java.time.Clock;
-import java.util.UUID;
-
 import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import java.time.Clock;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/profiles")

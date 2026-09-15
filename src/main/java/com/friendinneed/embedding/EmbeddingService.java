@@ -21,6 +21,18 @@ public class EmbeddingService {
         this.client = RestClient.builder().baseUrl(baseUrl).build();
     }
 
+    public static String serialize(float[] values) {
+        return java.util.Arrays.toString(values);
+    }
+
+    public static float[] deserialize(String raw) {
+        if (raw == null || raw.length() < 3) return new float[0];
+        String[] parts = raw.substring(1, raw.length() - 1).split(",");
+        float[] values = new float[parts.length];
+        for (int index = 0; index < parts.length; index++) values[index] = Float.parseFloat(parts[index].trim());
+        return values;
+    }
+
     public float[] embed(String text) {
         if (properties.apiKey() == null || properties.apiKey().isBlank()) return new float[0];
         JsonNode response = client.post().uri("v1/embeddings").header(HttpHeaders.AUTHORIZATION, "Bearer " + properties.apiKey())
@@ -34,18 +46,6 @@ public class EmbeddingService {
 
     public String model() {
         return properties.model();
-    }
-
-    public static String serialize(float[] values) {
-        return java.util.Arrays.toString(values);
-    }
-
-    public static float[] deserialize(String raw) {
-        if (raw == null || raw.length() < 3) return new float[0];
-        String[] parts = raw.substring(1, raw.length() - 1).split(",");
-        float[] values = new float[parts.length];
-        for (int index = 0; index < parts.length; index++) values[index] = Float.parseFloat(parts[index].trim());
-        return values;
     }
 
 }

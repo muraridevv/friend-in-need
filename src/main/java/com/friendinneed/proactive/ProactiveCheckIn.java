@@ -6,18 +6,19 @@ import com.friendinneed.conversation.ConversationMessageRepository;
 import com.friendinneed.integration.WeatherService;
 import com.friendinneed.profile.CompanionProfile;
 import com.friendinneed.profile.CompanionProfileRepository;
+import com.friendinneed.routing.ModelChoice;
+import com.friendinneed.routing.ModelRouter;
+import com.friendinneed.routing.OllamaAdapter;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
-
-import org.springframework.ai.chat.client.ChatClient;
-import com.friendinneed.routing.*;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ProactiveCheckIn {

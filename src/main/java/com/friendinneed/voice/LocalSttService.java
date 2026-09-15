@@ -1,9 +1,6 @@
 package com.friendinneed.voice;
 
 import com.fasterxml.jackson.databind.JsonNode;
-
-import java.io.IOException;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.MediaType;
@@ -11,6 +8,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 
 @Service
 public class LocalSttService {

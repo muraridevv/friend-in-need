@@ -1,20 +1,20 @@
 package com.friendinneed.routing;
 
+import org.springframework.http.HttpMethod;
+import org.springframework.web.client.RestClient;
+
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicLong;
-
-import org.springframework.http.HttpMethod;
-import org.springframework.web.client.RestClient;
 
 /**
  * Performs a lightweight provider reachability check and retains its rolling latency.
  */
 public class HealthPinger {
     private final RestClient client;
+    private final AtomicLong averageLatencyMillis = new AtomicLong(Long.MAX_VALUE);
     private volatile Instant lastSuccess;
     private volatile Instant lastFailure;
-    private final AtomicLong averageLatencyMillis = new AtomicLong(Long.MAX_VALUE);
 
     public HealthPinger() {
         this(RestClient.builder().build());

@@ -1,12 +1,12 @@
 package com.friendinneed;
 
+import com.friendinneed.embedding.EmbeddingProperties;
+import com.friendinneed.robot.RobotProperties;
+import com.friendinneed.voice.VoiceProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import com.friendinneed.embedding.EmbeddingProperties;
-import com.friendinneed.voice.VoiceProperties;
-import com.friendinneed.robot.RobotProperties;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @EnableScheduling
 @EnableConfigurationProperties({EmbeddingProperties.class, VoiceProperties.class, RobotProperties.class})

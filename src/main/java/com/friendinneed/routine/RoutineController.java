@@ -1,15 +1,17 @@
 package com.friendinneed.routine;
 
-import com.friendinneed.consent.*;
-import com.friendinneed.profile.*;
+import com.friendinneed.consent.ConsentService;
+import com.friendinneed.consent.IntegrationType;
+import com.friendinneed.profile.CompanionProfileRepository;
 import com.friendinneed.security.UserRepository;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
-
-import java.util.*;
-
-import org.springframework.http.*;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/profiles/{profileId}/routines")

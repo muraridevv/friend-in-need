@@ -2,14 +2,14 @@ package com.friendinneed.timer;
 
 import com.friendinneed.profile.CompanionProfileRepository;
 import com.friendinneed.security.UserRepository;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
-import java.util.*;
-
-import org.springframework.http.*;
-import org.springframework.web.bind.annotation.*;
+import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/profiles/{profileId}/timers")

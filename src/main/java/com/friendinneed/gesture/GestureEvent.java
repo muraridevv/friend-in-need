@@ -1,6 +1,7 @@
 package com.friendinneed.gesture;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
 
 import java.time.Instant;
 import java.util.UUID;

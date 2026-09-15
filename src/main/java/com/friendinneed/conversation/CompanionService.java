@@ -1,38 +1,33 @@
 package com.friendinneed.conversation;
 
+import com.friendinneed.consent.ConsentService;
+import com.friendinneed.consent.IntegrationType;
+import com.friendinneed.emotion.EmotionService;
 import com.friendinneed.memory.MemoryService;
-import com.friendinneed.consent.*;
-import com.friendinneed.smarthome.*;
+import com.friendinneed.profile.CompanionProfile;
+import com.friendinneed.profile.CompanionProfileRepository;
 import com.friendinneed.routine.RoutineService;
-import com.friendinneed.timer.TimerService;
 import com.friendinneed.routing.ModelChoice;
 import com.friendinneed.routing.ModelRouter;
 import com.friendinneed.routing.OllamaAdapter;
-import com.friendinneed.profile.CompanionProfile;
-import com.friendinneed.profile.CompanionProfileRepository;
+import com.friendinneed.smarthome.DeviceState;
+import com.friendinneed.smarthome.SmartHomeAdapter;
+import com.friendinneed.timer.TimerService;
 import com.friendinneed.token.TokenBudgetService;
-import com.friendinneed.emotion.EmotionService;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StreamUtils;
 import reactor.core.publisher.Flux;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 public class CompanionService {

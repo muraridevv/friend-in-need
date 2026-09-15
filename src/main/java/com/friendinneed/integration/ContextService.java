@@ -1,13 +1,16 @@
 package com.friendinneed.integration;
 
 import com.friendinneed.calendar.CalendarService;
+import com.friendinneed.consent.ConsentService;
+import com.friendinneed.consent.IntegrationType;
 import com.friendinneed.profile.CompanionProfile;
-import com.friendinneed.consent.*;
-import com.friendinneed.smarthome.*;
+import com.friendinneed.smarthome.SmartHomeAdapter;
 import com.friendinneed.timer.TimerService;
 import org.springframework.stereotype.Service;
 
-import java.time.*;
+import java.time.DateTimeException;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 
 @Service
 public class ContextService {

@@ -1,9 +1,10 @@
 package com.friendinneed.robot;
 
-import java.util.*;
-
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+
+import java.util.Base64;
+import java.util.Map;
 
 @Service
 @ConditionalOnProperty(name = "robot.mode", havingValue = "simulated", matchIfMissing = true)

@@ -3,10 +3,12 @@ package com.friendinneed.routine;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.friendinneed.smarthome.SmartHomeAdapter;
-
-import java.util.*;
-
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 @Service
 public class RoutineService {

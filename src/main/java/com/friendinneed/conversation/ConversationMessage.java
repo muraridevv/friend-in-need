@@ -1,15 +1,10 @@
 package com.friendinneed.conversation;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.Id;
+import com.friendinneed.emotion.EmotionLabel;
+import jakarta.persistence.*;
 
 import java.time.Instant;
 import java.util.UUID;
-
-import com.friendinneed.emotion.EmotionLabel;
 
 @Entity
 public class ConversationMessage {

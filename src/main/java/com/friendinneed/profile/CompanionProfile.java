@@ -107,10 +107,10 @@ public class CompanionProfile {
         return new FaceMatch(best >= 0.68, Math.round(best * 100));
     }
 
-    public record FaceMatch(boolean recognized, long confidence) {
-    }
-
     public boolean hasFaceEnrollment() {
         return faceFingerprint != null;
+    }
+
+    public record FaceMatch(boolean recognized, long confidence) {
     }
 }

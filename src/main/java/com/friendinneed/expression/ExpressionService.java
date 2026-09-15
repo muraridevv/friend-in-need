@@ -1,8 +1,8 @@
 package com.friendinneed.expression;
 
 import com.friendinneed.emotion.EmotionLabel;
-import org.springframework.stereotype.Service;
 import com.friendinneed.robot.RobotCommandQueue;
+import org.springframework.stereotype.Service;
 
 @Service
 public class ExpressionService {

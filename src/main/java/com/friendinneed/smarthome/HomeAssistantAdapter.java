@@ -1,14 +1,17 @@
 package com.friendinneed.smarthome;
 
-import com.fasterxml.jackson.databind.*;
-
-import java.util.*;
-
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 @ConditionalOnProperty(name = "smarthome.type", havingValue = "homeassistant")

@@ -1,14 +1,14 @@
 package com.friendinneed.memory;
 
-import java.util.UUID;
-import java.util.concurrent.ConcurrentLinkedQueue;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
-import org.springframework.transaction.CannotCreateTransactionException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.CannotCreateTransactionException;
+
+import java.util.UUID;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Buffers memory writes while PostgreSQL is unavailable, then retries them in order.

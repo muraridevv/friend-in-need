@@ -1,10 +1,10 @@
 package com.friendinneed.vision;
 
-import java.util.Base64;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+
+import java.util.Base64;
 
 @Service
 public class VisionService {

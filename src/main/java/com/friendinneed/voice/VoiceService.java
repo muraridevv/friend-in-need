@@ -1,22 +1,22 @@
 package com.friendinneed.voice;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.friendinneed.emotion.EmotionLabel;
+import com.friendinneed.routing.ModelChoice;
+import com.friendinneed.routing.ModelRouter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ByteArrayResource;
-import org.springframework.http.*;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.multipart.MultipartFile;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
 import java.util.Map;
-
-import com.friendinneed.emotion.EmotionLabel;
-import com.friendinneed.routing.ModelChoice;
-import com.friendinneed.routing.ModelRouter;
 
 /**
  * OpenAI-compatible voice adapter. Its base URL is deliberately separate from OpenRouter.
