@@ -35,6 +35,13 @@ public class CompanionProfile {
     public String getInterests() { return interests; }
     public String getTimezone() { return timezone; }
     public String getLocation() { return location; }
+    public void update(String displayName, String personality, String interests, String timezone, String location) {
+        this.displayName = displayName;
+        this.personality = personality;
+        this.interests = interests == null ? "" : interests;
+        this.timezone = timezone;
+        this.location = location;
+    }
     public void enrollFace(String fingerprint) { faceFingerprint = fingerprint; faceEnrolledAt = Instant.now(); }
     public FaceMatch faceMatch(String submittedTemplate) {
         if (faceFingerprint == null || submittedTemplate == null) return new FaceMatch(false, 0);

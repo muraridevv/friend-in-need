@@ -27,5 +27,5 @@ public class MemoryService {
         if (query.length>0 && candidate.length==query.length) return cosine(query,candidate);
         return Arrays.stream(memory.getContent().toLowerCase(Locale.ROOT).split("\\W+")).filter(terms::contains).count();
     }
-    private double cosine(float[] left,float[] right) { double dot=0,a=0,b=0; for(int i=0;i<left.length;i++){dot+=left[i]*right[i];a+=left[i]*left[i];b+=right[i]*right[i];} return a==0||b==0?0:dot/Math.sqrt(a*b); }
+    public static double cosine(float[] left,float[] right) { double dot=0,a=0,b=0; for(int i=0;i<left.length;i++){dot+=left[i]*right[i];a+=left[i]*left[i];b+=right[i]*right[i];} return a==0||b==0?0:dot/Math.sqrt(a*b); }
 }
