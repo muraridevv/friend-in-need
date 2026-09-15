@@ -4,3 +4,5 @@
 #camera-dialog{background:transparent;border:0;padding:0}.camera-panel{width:min(520px,calc(100vw - 32px));background:var(--paper);padding:28px;box-shadow:8px 8px 0 var(--accent)}#camera-dialog h2{margin:8px 0 12px}#camera-status{font-size:12px;min-height:2.8em}#camera{display:block;background:#17251f;width:100%;max-height:55vh;object-fit:cover;transform:scaleX(-1);border:1px solid var(--ink)}#camera-dialog menu{margin-bottom:0}
 
 .bubble.proactive{background:#e4edf7;border-left:3px solid #6d91b6}.bubble-label{display:block;font-size:10px;letter-spacing:.08em;color:#526d85;margin-bottom:5px}.toggle{display:flex;align-items:center;gap:8px}.toggle input{min-width:auto;padding:0}
+
+@media (max-width:768px){main{grid-template-columns:1fr}aside{display:none}aside.open{display:flex;position:fixed;inset:0;z-index:5}.conversation{padding:20px 16px 16px}form#composer{flex-wrap:nowrap}header{flex-wrap:wrap;gap:8px}dialog{width:100%;max-width:none}dialog form,.camera-panel{width:100%;min-height:100vh}}

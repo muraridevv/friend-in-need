@@ -8,4 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface ConversationMessageRepository extends JpaRepository<ConversationMessage, UUID> {
     List<ConversationMessage> findTop12ByProfileIdOrderByCreatedAtDesc(UUID profileId);
     int deleteByCreatedAtBefore(Instant cutoff);
+    List<ConversationMessage> findByProfileIdOrderByCreatedAtAsc(UUID profileId);
+    long deleteByProfileId(UUID profileId);
 }

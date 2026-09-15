@@ -30,6 +30,7 @@ public class ConversationMessage {
     }
 
     public UUID getId() { return id; }
+    public Instant getCreatedAt() { return createdAt; }
     public MessageRole getRole() { return role; }
     public String getContent() { return content; }
 }

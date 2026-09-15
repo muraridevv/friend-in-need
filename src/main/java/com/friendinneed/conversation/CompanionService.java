@@ -21,6 +21,7 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StreamUtils;
+import reactor.core.publisher.Flux;
 
 @Service
 public class CompanionService {
@@ -60,6 +61,17 @@ public class CompanionService {
         rememberIfUseful(profileId, text);
         log.info("Completed companion turn: profileId={}, responseLength={}", profileId, answer.length());
         return new Reply(answer);
+    }
+
+    @Transactional
+    public Flux<String> talkStreaming(UUID profileId, String text, String context) {
+        CompanionProfile profile = profiles.findById(profileId).orElseThrow(() -> new NoSuchElementException("Profile not found"));
+        messages.save(new ConversationMessage(profileId, MessageRole.USER, text));
+        String system = renderSystemPrompt(Map.of("displayName", profile.getDisplayName(), "personality", profile.getPersonality(),
+                "interests", profile.getInterests(), "memories", memory.relevantTo(profileId, text), "context", context, "history", ""));
+        StringBuilder fullMessage = new StringBuilder();
+        return chat.prompt().system(system).user(text).stream().content().doOnNext(fullMessage::append)
+                .doOnComplete(() -> messages.save(new ConversationMessage(profileId, MessageRole.ASSISTANT, fullMessage.toString())));
     }
 
     private void rememberIfUseful(UUID profileId, String userText) {

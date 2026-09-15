@@ -3,6 +3,8 @@ package com.friendinneed.api;
 import com.friendinneed.calendar.CalendarEvent;
 import com.friendinneed.calendar.CalendarService;
 import com.friendinneed.conversation.CompanionService;
+import com.friendinneed.conversation.ConversationMessageRepository;
+import com.friendinneed.conversation.ConversationMessage;
 import com.friendinneed.integration.ContextService;
 import com.friendinneed.integration.WeatherService;
 import com.friendinneed.integration.NewsService;
@@ -30,6 +32,11 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RequestParam;
+import reactor.core.publisher.Flux;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -51,6 +58,7 @@ public class CompanionController {
     private final NewsService news;
     private final CompanionProfileRepository profiles;
     private final UserRepository users;
+    private final ConversationMessageRepository messages;
 
     public CompanionController(
             CompanionService companion,
@@ -60,7 +68,8 @@ public class CompanionController {
             MemoryService memory,
             NewsService news,
             CompanionProfileRepository profiles,
-            UserRepository users) {
+            UserRepository users,
+            ConversationMessageRepository messages) {
         this.companion = companion;
         this.context = context;
         this.weather = weather;
@@ -69,6 +78,7 @@ public class CompanionController {
         this.news = news;
         this.profiles = profiles;
         this.users = users;
+        this.messages = messages;
     }
 
     @PostMapping("/profiles")
@@ -101,6 +111,15 @@ public class CompanionController {
         CompanionProfile profile = profile(id);
         profile.setProactiveEnabled(body.proactiveEnabled());
         return ProfileView.of(profiles.save(profile));
+    }
+
+    @GetMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    Flux<ServerSentEvent<java.util.Map<String, Object>>> streamChat(@RequestParam UUID profileId, @RequestParam String message) {
+        CompanionProfile profile = profile(profileId);
+        StringBuilder complete = new StringBuilder();
+        return companion.talkStreaming(profileId, message, context.relevantContext(profile)).map(token -> {
+            complete.append(token); return ServerSentEvent.builder(java.util.Map.<String, Object>of("token", token)).build();
+        }).concatWith(Flux.defer(() -> Flux.just(ServerSentEvent.builder(java.util.Map.<String, Object>of("done", true, "fullMessage", complete.toString())).build())));
     }
 
     @PostMapping("/chat")
@@ -146,6 +165,16 @@ public class CompanionController {
         profile(id);
         memory.remember(id, request.content(), request.importance());
     }
+
+    @GetMapping("/profiles/{id}/conversations/export")
+    ResponseEntity<List<ConversationMessage>> exportConversations(@PathVariable UUID id) {
+        profile(id);
+        return ResponseEntity.ok().header("Content-Disposition", "attachment; filename=conversations.json").body(messages.findByProfileIdOrderByCreatedAtAsc(id));
+    }
+
+    @DeleteMapping("/profiles/{id}/conversations")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void deleteConversations(@PathVariable UUID id) { profile(id); messages.deleteByProfileId(id); }
 
     @GetMapping("/profiles/{id}/calendar")
     List<CalendarView> calendar(@PathVariable UUID id) {

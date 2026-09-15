@@ -3,6 +3,7 @@ package com.friendinneed;
 import com.friendinneed.api.CompanionController;
 import com.friendinneed.calendar.CalendarService;
 import com.friendinneed.conversation.CompanionService;
+import com.friendinneed.conversation.ConversationMessageRepository;
 import com.friendinneed.integration.ContextService;
 import com.friendinneed.integration.WeatherService;
 import com.friendinneed.integration.NewsService;
@@ -27,6 +28,7 @@ class CompanionControllerValidationTest {
     @Autowired
     private MockMvc mockMvc;
     @MockBean private CompanionService companion;
+    @MockBean private ConversationMessageRepository messages;
     @MockBean private ContextService context;
     @MockBean private WeatherService weather;
     @MockBean private CalendarService calendar;

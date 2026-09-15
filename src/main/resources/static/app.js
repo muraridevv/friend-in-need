@@ -32,6 +32,7 @@ async function speak(text) {
     await audio.play();
   } catch { /* Voice provider is optional; text remains available. */ }
 }
+$('#menu').onclick = () => document.querySelector('aside').classList.toggle('open');
 $('#settings').onclick = () => dialog.showModal();
 $('#switch-user').onclick = () => identityDialog.showModal();
 $('#recognize-login').onclick = () => { identityDialog.close(); openFaceCamera('login'); };
@@ -49,7 +50,7 @@ form.addEventListener('submit', async (event) => {
 $('#composer').addEventListener('submit', async (event) => {
   event.preventDefault(); const input = $('#message'); const text = input.value.trim(); if (!text) return; if (!profile) return dialog.showModal();
   bubble(text, 'user'); input.value = ''; const pending = bubble('Thinking…', 'companion');
-  try { const reply = await api('/chat', { profileId: profile.id, message: text }); pending.textContent = reply.message; speak(reply.message); } catch (error) { pending.textContent = `I’m having trouble connecting: ${error.message}`; }
+  try { const response = await fetch(`/api/chat/stream?profileId=${encodeURIComponent(profile.id)}&message=${encodeURIComponent(text)}`); if (!response.ok) throw new Error('Streaming failed'); const reader = response.body.getReader(); const decoder = new TextDecoder(); let full = ''; while (true) { const { value, done } = await reader.read(); if (done) break; for (const line of decoder.decode(value, { stream: true }).split('\n')) if (line.startsWith('data: ')) { const event = JSON.parse(line.slice(6)); if (event.token) { full += event.token; pending.textContent = full; } if (event.done) { pending.textContent = event.fullMessage; speak(event.fullMessage); } } } } catch (error) { pending.textContent = `I’m having trouble connecting: ${error.message}`; }
 });
 $('#mic').onclick = async () => {
   if (recording) { recorder.stop(); return; }
