@@ -28,7 +28,7 @@ public class CompanionController {
     @GetMapping("/profiles/{id}") ProfileView get(@PathVariable UUID id) { return ProfileView.of(profile(id)); }
     @PostMapping("/chat") CompanionService.Reply chat(@Valid @RequestBody ChatRequest body) { CompanionProfile p=profile(body.profileId()); return companion.talk(p.getId(),body.message(),context.relevantContext(p)); }
     @PostMapping("/profiles/{id}/face") ProfileView enroll(@PathVariable UUID id,@Valid @RequestBody FaceRequest request) { var p=profile(id); p.enrollFace(request.descriptor()); return ProfileView.of(profiles.save(p)); }
-    @PostMapping("/profiles/{id}/face/verify") Map<String,Boolean> verify(@PathVariable UUID id,@Valid @RequestBody FaceRequest request) { return Map.of("recognized",profile(id).faceMatches(request.descriptor())); }
+    @PostMapping("/profiles/{id}/face/verify") FaceVerification verify(@PathVariable UUID id,@Valid @RequestBody FaceRequest request) { var match=profile(id).faceMatch(request.descriptor()); return new FaceVerification(match.recognized(), match.confidence()); }
     @PostMapping("/profiles/{id}/memories") @ResponseStatus(HttpStatus.CREATED)
     void remember(@PathVariable UUID id, @Valid @RequestBody MemoryRequest request) { profile(id); memory.remember(id,request.content(),request.importance()); }
     @GetMapping("/profiles/{id}/calendar") List<CalendarView> calendar(@PathVariable UUID id) { return calendar.upcoming(profile(id).getId()).stream().map(CalendarView::of).toList(); }
@@ -38,7 +38,8 @@ public class CompanionController {
     private CompanionProfile profile(UUID id) { return profiles.findById(id).orElseThrow(()->new NoSuchElementException("Profile not found")); }
     record CreateProfile(@NotBlank @Size(max=80) String displayName,@NotBlank @Size(max=2000) String personality,@Size(max=1000) String interests,@NotBlank @Size(max=80) String timezone,@NotBlank @Size(max=120) String location) { }
     record ChatRequest(@NotNull UUID profileId,@NotBlank @Size(max=6000) String message) { }
-    record FaceRequest(@NotBlank @Size(min=64, max=1024) String descriptor) { }
+    record FaceRequest(@NotBlank @Size(min=64, max=4096) String descriptor) { }
+    record FaceVerification(boolean recognized, long confidence) { }
     record MemoryRequest(@NotBlank @Size(max=1000) String content,@Min(1) @Max(5) int importance) { }
     record EventRequest(@NotBlank @Size(max=160) String title,@NotNull Instant startsAt, Instant endsAt) { }
     record CalendarView(UUID id,String title,Instant startsAt,Instant endsAt) { static CalendarView of(CalendarEvent e) { return new CalendarView(e.getId(),e.getTitle(),e.getStartsAt(),e.getEndsAt()); } }

@@ -36,11 +36,18 @@ public class CompanionProfile {
     public String getTimezone() { return timezone; }
     public String getLocation() { return location; }
     public void enrollFace(String fingerprint) { faceFingerprint = fingerprint; faceEnrolledAt = Instant.now(); }
-    public boolean faceMatches(String descriptor) {
-        if (faceFingerprint == null || descriptor == null || faceFingerprint.length() != descriptor.length()) return false;
-        int sameBits = 0;
-        for (int index = 0; index < descriptor.length(); index++) if (faceFingerprint.charAt(index) == descriptor.charAt(index)) sameBits++;
-        return (double) sameBits / descriptor.length() >= 0.88;
+    public FaceMatch faceMatch(String submittedTemplate) {
+        if (faceFingerprint == null || submittedTemplate == null) return new FaceMatch(false, 0);
+        double best = 0;
+        for (String enrolled : faceFingerprint.split("\\|")) for (String submitted : submittedTemplate.split("\\|")) {
+            if (enrolled.length() != submitted.length()) continue;
+            int equalBits = 0;
+            for (int index = 0; index < enrolled.length(); index++) if (enrolled.charAt(index) == submitted.charAt(index)) equalBits++;
+            best = Math.max(best, (double) equalBits / enrolled.length());
+        }
+        // Template matching is only a convenience signal; it is not authentication.
+        return new FaceMatch(best >= 0.68, Math.round(best * 100));
     }
+    public record FaceMatch(boolean recognized, long confidence) { }
     public boolean hasFaceEnrollment() { return faceFingerprint != null; }
 }

@@ -1,6 +1,6 @@
 # friend in need
 
-A Java 21 / Spring AI companion application with a voice-enabled web experience, profile personality, conversation memory, local camera-fingerprint enrollment, and a clean path to consented weather, calendar, news, proactive check-ins, and pgvector RAG.
+A Java 21 / Spring AI companion application with a voice-enabled web experience, profile personality, conversation memory, local camera-template enrollment, and a clean path to consented weather, calendar, news, proactive check-ins, and pgvector RAG.
 
 ## Run locally
 
@@ -13,7 +13,7 @@ The OpenRouter endpoint is configured through Spring AI's OpenAI-compatible clie
 
 ## Product boundaries
 
-Voice uses browser speech APIs. Camera enrollment stores a compact fingerprint, not an image; it is a demo convenience and **not authentication**. External integrations are intentionally opt-in adapters rather than silent data collection. See [architecture notes](docs/architecture.md).
+Voice uses browser speech APIs. Camera enrollment stores compact face templates, not an image; it is a demo convenience and **not authentication**. External integrations are intentionally opt-in adapters rather than silent data collection. See [architecture notes](docs/architecture.md).
 
 ## Model configuration
 

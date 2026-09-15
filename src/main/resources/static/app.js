@@ -53,17 +53,31 @@ $('#mic').onclick = async () => {
     recorder.start(); recording = true; $('#mic').textContent = '■';
   } catch (error) { alert(`Microphone unavailable: ${error.message}`); }
 };
-async function faceDescriptor() {
-  const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } }); const video = $('#camera'); video.srcObject = stream;
+async function faceDescriptor(samples = 1) {
+  const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+  const video = $('#camera'); video.srcObject = stream;
   await new Promise((resolve) => { video.onloadeddata = resolve; });
-  let crop = { x: 0, y: 0, width: video.videoWidth, height: video.videoHeight };
-  if ('FaceDetector' in window) { const face = (await new FaceDetector({ fastMode: false, maxDetectedFaces: 1 }).detect(video))[0]; if (!face) { stream.getTracks().forEach((track) => track.stop()); throw new Error('No face detected. Center your face and try again.'); } crop = face.boundingBox; }
-  const canvas = $('#canvas'); const context = canvas.getContext('2d', { willReadFrequently: true }); canvas.width = 32; canvas.height = 32;
-  context.drawImage(video, crop.x, crop.y, crop.width, crop.height, 0, 0, 32, 32); stream.getTracks().forEach((track) => track.stop());
-  const pixels = context.getImageData(0, 0, 32, 32).data; const shades = []; for (let index = 0; index < pixels.length; index += 4) shades.push((pixels[index] * 0.299) + (pixels[index + 1] * 0.587) + (pixels[index + 2] * 0.114));
-  const mean = shades.reduce((sum, shade) => sum + shade, 0) / shades.length; return shades.map((shade) => shade >= mean ? '1' : '0').join('');
+  const templates = [];
+  try {
+    for (let sample = 0; sample < samples; sample += 1) {
+      let crop = { x: 0, y: 0, width: video.videoWidth, height: video.videoHeight };
+      if ('FaceDetector' in window) {
+        const face = (await new FaceDetector({ fastMode: false, maxDetectedFaces: 1 }).detect(video))[0];
+        if (!face) throw new Error('No face detected. Center your face and try again.');
+        crop = face.boundingBox;
+      }
+      const canvas = $('#canvas'); const context = canvas.getContext('2d', { willReadFrequently: true }); canvas.width = 32; canvas.height = 32;
+      context.drawImage(video, crop.x, crop.y, crop.width, crop.height, 0, 0, 32, 32);
+      const pixels = context.getImageData(0, 0, 32, 32).data; const shades = [];
+      for (let index = 0; index < pixels.length; index += 4) shades.push((pixels[index] * 0.299) + (pixels[index + 1] * 0.587) + (pixels[index + 2] * 0.114));
+      const mean = shades.reduce((sum, shade) => sum + shade, 0) / shades.length;
+      templates.push(shades.map((shade) => shade >= mean ? '1' : '0').join(''));
+      if (sample + 1 < samples) await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    return templates.join('|');
+  } finally { stream.getTracks().forEach((track) => track.stop()); }
 }
-$('#face').onclick = async () => { if (!profile) return dialog.showModal(); try { profile = await api(`/profiles/${profile.id}/face`, { descriptor: await faceDescriptor() }); localStorage.setItem('fin-profile', JSON.stringify(profile)); updateProfile(); alert('Face template enrolled. Use similar lighting for recognition.'); } catch (error) { alert(error.message); } };
+$('#face').onclick = async () => { if (!profile) return dialog.showModal(); try { profile = await api(`/profiles/${profile.id}/face`, { descriptor: await faceDescriptor(3) }); localStorage.setItem('fin-profile', JSON.stringify(profile)); updateProfile(); alert('Face enrollment complete. Three camera templates were saved for more reliable recognition.'); } catch (error) { alert(error.message); } };
 $('#briefing').onclick = async () => { if (!profile) return dialog.showModal(); try { const response = await fetch(`/api/profiles/${profile.id}/briefing`); const briefing = await responseJson(response); const events = briefing.events.length ? briefing.events.map((event) => `${event.title} at ${new Date(event.startsAt).toLocaleString()}`).join('; ') : 'No events in the next seven days.'; const text = `${briefing.weather} ${events}`; bubble(text, 'companion'); speak(text); } catch (error) { alert(error.message); } };
-$('#verify').onclick = async () => { if (!profile) return dialog.showModal(); try { const result = await api(`/profiles/${profile.id}/face/verify`, { descriptor: await faceDescriptor() }); alert(result.recognized ? 'Welcome back!' : 'I could not recognize you. Try enrolling again in similar lighting.'); } catch (error) { alert(error.message); } };
+$('#verify').onclick = async () => { if (!profile) return dialog.showModal(); try { const result = await api(`/profiles/${profile.id}/face/verify`, { descriptor: await faceDescriptor(2) }); alert(result.recognized ? `Welcome back! Face similarity: ${result.confidence}%` : `I could not match this capture (similarity: ${result.confidence}%). Keep your face centered and try again.`); } catch (error) { alert(error.message); } };
 updateProfile(); if (!profile) dialog.showModal();
