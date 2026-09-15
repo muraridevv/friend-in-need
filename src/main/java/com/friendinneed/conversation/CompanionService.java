@@ -76,8 +76,8 @@ public class CompanionService {
                 .map(message -> message.getRole() + ": " + message.getContent()).collect(Collectors.joining("\n"));
         String memories = memory.relevantTo(profileId, text);
         String system = renderSystemPrompt(Map.of("displayName", profile.getDisplayName(), "personality", profile.getPersonality(),
-                "interests", profile.getInterests(), "memories", "", "context", context + " The user current emotional state appears to be: " + emotion.emotion() + " (confidence: " + emotion.confidence() + "). Adjust your tone accordingly.", "history", ""));
-        String prompt = tokenBudget.trimToFit(system, history, memories, 0);
+                "interests", profile.getInterests(), "memories", memories, "context", context + " The user current emotional state appears to be: " + emotion.emotion() + " (confidence: " + emotion.confidence() + "). Adjust your tone accordingly.", "history", history));
+        String prompt = tokenBudget.trimToFit(system, "", "", 0);
         ModelChoice choice = modelRouter.routeChat();
         log.info("Serving companion turn with {} model: profileId={}", choice, profileId);
         String answer = choice == ModelChoice.LOCAL ? ollama.talk(prompt, text) : chat.prompt().system(prompt).user(text).call().content();
@@ -90,18 +90,17 @@ public class CompanionService {
         return new Reply(answer);
     }
 
-    @Transactional
     public Flux<String> talkStreaming(UUID profileId, String text, String context) {
         CompanionProfile profile = profiles.findById(profileId).orElseThrow(() -> new NoSuchElementException("Profile not found"));
-        messages.save(new ConversationMessage(profileId, MessageRole.USER, text));
-        String system = renderSystemPrompt(Map.of("displayName", profile.getDisplayName(), "personality", profile.getPersonality(),
-                "interests", profile.getInterests(), "memories", memory.relevantTo(profileId, text), "context", context, "history", ""));
-        ModelChoice choice = modelRouter.routeChat();
-        log.info("Serving streaming companion turn with {} model: profileId={}", choice, profileId);
-        StringBuilder fullMessage = new StringBuilder();
-        Flux<String> response = choice == ModelChoice.LOCAL ? ollama.talkStreaming(system, text) : chat.prompt().system(system).user(text).stream().content();
-        return response.doOnNext(fullMessage::append)
-                .doOnComplete(() -> messages.save(new ConversationMessage(profileId, MessageRole.ASSISTANT, fullMessage.toString())));
+        ConversationMessage user = messages.save(new ConversationMessage(profileId, MessageRole.USER, text));
+        EmotionService.EmotionResult emotion = emotions.detectFromText(text); user.setEmotion(emotion.emotion(), emotion.confidence());
+        List<ConversationMessage> recent = new ArrayList<>(messages.findTop12ByProfileIdOrderByCreatedAtDesc(profileId)); Collections.reverse(recent);
+        String history = recent.stream().filter(m -> !m.getId().equals(user.getId())).limit(10).map(m -> m.getRole()+": "+m.getContent()).collect(Collectors.joining("\n"));
+        String memories = memory.relevantTo(profileId, text);
+        String system = renderSystemPrompt(Map.of("displayName",profile.getDisplayName(),"personality",profile.getPersonality(),"interests",profile.getInterests(),"memories",memories,"history",history,"context",context+" User emotion: "+emotion.emotion()));
+        String prompt = tokenBudget.trimToFit(system,"", "",0); ModelChoice choice=modelRouter.routeChat(); StringBuilder full=new StringBuilder();
+        Flux<String> response=choice==ModelChoice.LOCAL?ollama.talkStreaming(prompt,text):chat.prompt().system(prompt).user(text).stream().content();
+        return response.doOnNext(full::append).doOnComplete(()->{messages.save(new ConversationMessage(profileId,MessageRole.ASSISTANT,full.toString()));rememberIfUseful(profileId,text);});
     }
 
 

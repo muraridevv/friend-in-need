@@ -15,11 +15,12 @@ import reactor.core.publisher.Flux;
 public class OllamaAdapter {
     private final RestClient client;
     private final String model;
+    private final String baseUrl;
     public OllamaAdapter(@Value("${OLLAMA_BASE_URL:http://localhost:11434}") String baseUrl,
             @Value("${OLLAMA_MODEL:phi3:mini}") String model) {
         this(RestClient.builder().baseUrl(baseUrl + (baseUrl.endsWith("/") ? "v1" : "/v1")).build(), model);
     }
-    OllamaAdapter(RestClient client, String model) { this.client = client; this.model = model; }
+    OllamaAdapter(RestClient client, String model) { this.client = client; this.model = model; this.baseUrl = null; }
     /** Compatibility entry point matching CompanionService.talk; context is used as the local system prompt. */
     public CompanionService.Reply talk(UUID profileId, String text, String context) {
         return new CompanionService.Reply(talk(context, text));

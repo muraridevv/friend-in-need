@@ -17,6 +17,7 @@ import org.springframework.web.socket.handler.BinaryWebSocketHandler;
 
 @Component
 public class VoiceStreamEndpoint extends BinaryWebSocketHandler {
+    private static final int MAX_AUDIO_BYTES = 10 * 1024 * 1024;
     private final VoiceService voice;
     private final ObjectMapper json;
     private final Map<String, ByteArrayOutputStream> buffers = new ConcurrentHashMap<>();
@@ -37,6 +38,7 @@ public class VoiceStreamEndpoint extends BinaryWebSocketHandler {
         ByteArrayOutputStream buffer = buffers.get(session.getId());
         byte[] bytes = new byte[message.getPayloadLength()];
         message.getPayload().get(bytes);
+        if (buffer.size() + bytes.length > MAX_AUDIO_BYTES) { buffers.remove(session.getId()); session.close(org.springframework.web.socket.CloseStatus.POLICY_VIOLATION); return; }
         buffer.write(bytes);
     }
 
