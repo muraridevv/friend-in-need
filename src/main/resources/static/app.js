@@ -47,6 +47,7 @@ async function speak(text) {
     await audio.play();
   } catch { /* Voice provider is optional; text remains available. */ }
 }
+$('#show').onclick = async () => { if (!presenceCanvas) return; presenceCanvas.toBlob(async blob => { const form = new FormData(); form.append('image', blob, 'show.jpg'); form.append('prompt', 'Describe what you see'); const result = await responseJson(await fetch('/api/vision/describe', { method:'POST', body:form })); bubble(result.description, 'companion proactive', 'What Nova sees'); $('#message').value = `I'm showing you something: ${result.description}`; $('#composer').requestSubmit(); }, 'image/jpeg'); };
 $('#hands-free').onclick = () => { handsFree = !handsFree; $('#hands-free').classList.toggle('active', handsFree); if (handsFree) setupVad(); };
 $('#mic').onclick = () => { startVoiceTurn(); setupVad(); window.voiceVad?.start(); };
 $('#menu').onclick = () => document.querySelector('aside').classList.toggle('open');
