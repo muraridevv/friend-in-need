@@ -1,0 +1,1 @@
+create table scene_observation (id uuid primary key, profile_id uuid not null references companion_profile(id) on delete cascade, description text not null, created_at timestamptz not null default now());

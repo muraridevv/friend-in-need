@@ -1,0 +1,1 @@
+create table gesture_event (id uuid primary key, profile_id uuid not null references companion_profile(id) on delete cascade, gesture_type varchar(32) not null, created_at timestamptz not null default now());
