@@ -22,3 +22,7 @@ Three independently configured models are used: `OPENROUTER_MODEL` for conversat
 ## API documentation
 
 After startup, interactive Swagger UI is available at [`/swagger-ui/index.html`](http://localhost:8080/swagger-ui/index.html). The OpenAPI document is served from [`/v3/api-docs`](http://localhost:8080/v3/api-docs).
+
+## Multiple people on one device
+
+Each companion profile owns its personality, memories, conversations, calendar events, and face templates. A fresh page load starts at the face-login screen rather than restoring the previous browser user. Use **Switch user** to recognize a different enrolled person; only the recognized profile ID is sent with subsequent chat and integration requests.

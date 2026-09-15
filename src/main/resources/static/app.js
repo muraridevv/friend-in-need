@@ -2,7 +2,9 @@ const $ = (selector) => document.querySelector(selector);
 const dialog = $('#profile-dialog');
 const form = $('#profile-form');
 const messages = $('#messages');
-let profile = JSON.parse(localStorage.getItem('fin-profile') || 'null');
+const identityDialog = $('#identity-dialog');
+// Do not restore the prior browser user: every fresh page load requires a face login or profile creation.
+let profile = null;
 let recorder;
 let recording = false;
 let cameraStream;
@@ -29,6 +31,9 @@ async function speak(text) {
   } catch { /* Voice provider is optional; text remains available. */ }
 }
 $('#settings').onclick = () => dialog.showModal();
+$('#switch-user').onclick = () => identityDialog.showModal();
+$('#recognize-login').onclick = () => { identityDialog.close(); openFaceCamera('login'); };
+$('#create-profile').onclick = () => { identityDialog.close(); dialog.showModal(); };
 form.addEventListener('submit', async (event) => {
   event.preventDefault(); if (event.submitter?.value === 'cancel') return;
   const values = new FormData(form);
@@ -57,9 +62,9 @@ $('#mic').onclick = async () => {
 };
 async function openFaceCamera(purpose) {
   cameraPurpose = purpose; const modal = $('#camera-dialog'); const video = $('#camera');
-  $('#camera-mode').textContent = purpose === 'enroll' ? 'FACE ENROLLMENT' : 'FACE RECOGNITION';
+  $('#camera-mode').textContent = purpose === 'enroll' ? 'FACE ENROLLMENT' : purpose === 'login' ? 'FACE LOGIN' : 'FACE RECOGNITION';
   $('#camera-status').textContent = 'Keep your face centered in the live preview, then select Capture face.';
-  $('#camera-capture').textContent = purpose === 'enroll' ? 'Save 3 templates' : 'Recognize me';
+  $('#camera-capture').textContent = purpose === 'enroll' ? 'Save 3 templates' : purpose === 'login' ? 'Sign in with face' : 'Recognize me';
   try { cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } }); video.srcObject = cameraStream; await new Promise((resolve) => { video.onloadeddata = resolve; }); modal.showModal(); } catch (error) { alert(`Camera unavailable: ${error.message}`); }
 }
 function closeFaceCamera() { if (cameraStream) cameraStream.getTracks().forEach((track) => track.stop()); cameraStream = undefined; $('#camera').srcObject = null; $('#camera-dialog').close(); }
@@ -81,14 +86,15 @@ async function captureFaceTemplates(samples) {
 $('#camera-cancel').onclick = closeFaceCamera;
 $('#camera-dialog').addEventListener('cancel', (event) => { event.preventDefault(); closeFaceCamera(); });
 $('#face').onclick = () => { if (!profile) return dialog.showModal(); openFaceCamera('enroll'); };
-$('#verify').onclick = () => { if (!profile) return dialog.showModal(); openFaceCamera('verify'); };
+$('#verify').onclick = () => openFaceCamera(profile ? 'verify' : 'login');
 $('#camera-capture').onclick = async () => {
   const capture = $('#camera-capture'); capture.disabled = true;
   try {
     const descriptor = await captureFaceTemplates(cameraPurpose === 'enroll' ? 3 : 2);
     if (cameraPurpose === 'enroll') { profile = await api(`/profiles/${profile.id}/face`, { descriptor }); localStorage.setItem('fin-profile', JSON.stringify(profile)); updateProfile(); $('#camera-status').textContent = 'Enrollment complete.'; }
+    else if (cameraPurpose === 'login') { const result = await api('/profiles/recognize', { descriptor }); if (!result.recognized) { $('#camera-status').textContent = 'No enrolled profile matched. Try again or create a new profile.'; capture.disabled = false; return; } profile = result.profile; localStorage.setItem('fin-profile', JSON.stringify(profile)); updateProfile(); $('#camera-status').textContent = `Welcome back, ${profile.displayName}! Similarity: ${result.confidence}%`; }
     else { const result = await api(`/profiles/${profile.id}/face/verify`, { descriptor }); $('#camera-status').textContent = result.recognized ? `Welcome back! Face similarity: ${result.confidence}%` : `No match (${result.confidence}%). Keep centered and capture again.`; if (!result.recognized) { capture.disabled = false; return; } }
     setTimeout(closeFaceCamera, 900);
   } catch (error) { $('#camera-status').textContent = error.message; capture.disabled = false; }
 };
-updateProfile(); if (!profile) dialog.showModal();
+updateProfile(); if (!profile) identityDialog.showModal();

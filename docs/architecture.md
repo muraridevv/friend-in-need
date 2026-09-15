@@ -31,3 +31,7 @@ Face enrollment now creates a three 32×32 normalized luminance templates from a
 ## API observability and documentation
 
 Springdoc publishes OpenAPI at `/v3/api-docs` and Swagger UI at `/swagger-ui/index.html`. Voice logs identify the resolved provider base URL and the exact STT/TTS endpoint shape without logging API keys, audio, or text. For OpenAI specifically, a bare `https://api.openai.com` base URL is normalized to `https://api.openai.com/v1/` so the audio routes do not fail from a missing API version segment.
+
+## Multi-user profile selection
+
+Face login calls `POST /api/profiles/recognize`, evaluates the submitted templates against enrolled profiles, and selects the highest recognized confidence. The browser does not restore a prior profile after reload, which prevents a shared device from silently continuing the last person's conversation. Every chat request remains profile-scoped; production deployments should additionally bind that profile to an authenticated principal and enforce it at the service boundary.
