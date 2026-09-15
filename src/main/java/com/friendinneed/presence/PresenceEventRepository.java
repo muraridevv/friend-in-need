@@ -1,0 +1,1 @@
+package com.friendinneed.presence; import java.util.*; import org.springframework.data.jpa.repository.JpaRepository; public interface PresenceEventRepository extends JpaRepository<PresenceEvent,UUID>{ Optional<PresenceEvent> findTop1ByProfileIdOrderByCreatedAtDesc(UUID profileId); }

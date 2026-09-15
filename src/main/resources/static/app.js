@@ -10,6 +10,7 @@ let recorder;
 let recording = false;
 let cameraStream;
 let cameraPurpose;
+const PRESENCE_ENABLED = true; let presenceStream, presenceCanvas, lastPresenceFrame, absentSince;
 let voiceSocket, handsFree = false, audioQueue = [], playingAudio, speechStartedAt;
 const latency = {};
 function showLatency() { $("#latency-values").textContent = Object.entries(latency).map(([k,v]) => `${k}: ${Math.round(v)}ms`).join("\n"); }
@@ -24,6 +25,7 @@ async function setupVad() { if (!window.vad) return; try { const vad = await vad
 
 function emotionDot(emotion) { const dot=document.createElement("i"); dot.className=`emotion-dot ${String(emotion || "NEUTRAL").toLowerCase()}`; return dot; }
 async function loadMood() { if (!profile) return; try { const values=await responseJson(await fetch(`/api/profiles/${profile.id}/emotions?limit=10`)); const strip=$("#mood-strip"); strip.replaceChildren(...values.reverse().map(value=>emotionDot(value.emotion))); } catch {} }
+async function startPresence() { if (!PRESENCE_ENABLED || !profile || presenceStream) return; try { presenceStream = await navigator.mediaDevices.getUserMedia({video:{width:320,height:240},audio:false}); const video=document.createElement("video"); video.srcObject=presenceStream; await video.play(); presenceCanvas=document.createElement("canvas"); presenceCanvas.width=320; presenceCanvas.height=240; const detector=window.FaceDetector ? new FaceDetector({fastMode:true,maxDetectedFaces:4}) : null; setInterval(async()=>{ if(!profile) return; const ctx=presenceCanvas.getContext("2d");ctx.drawImage(video,0,0,320,240);let faces=[];try{faces=detector?await detector.detect(presenceCanvas):[];}catch{} const present=faces.length>0; if(present) absentSince=null; else absentSince??=Date.now(); const away=!present&&Date.now()-absentSince>=30000; const result=await responseJson(await fetch(`/api/profiles/${profile.id}/presence`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({status:away?"AWAY":"PRESENT",faceCount:faces.length})})); if(result.multiplePeople) bubble("I notice someone else is here. Would they like to say hi?", "companion proactive", "Nova checked in"); if(result.changed&&result.newStatus==="AWAY") $("#messages").dataset.presence="away"; if(result.changed&&result.newStatus==="PRESENT") { $("#messages").dataset.presence="present"; if(result.awayDurationMinutes) bubble(`Welcome back! You were away for about ${result.awayDurationMinutes} minutes. How’s it going?`,"companion proactive","Nova checked in"); } },2000); }catch(error){console.warn("Presence detection unavailable",error);} }
 function updateProfile() {
   $('#profile-name').textContent = profile ? profile.displayName : 'Getting to know you';
   $('#profile-detail').textContent = profile ? `${profile.faceEnrolled ? 'Face enrolled · ' : ''}${profile.personality}` : 'Set up your companion below.';
@@ -59,7 +61,7 @@ form.addEventListener('submit', async (event) => {
     profile = await api('/profiles', { displayName: values.get('displayName'), personality: values.get('personality'), interests: values.get('interests'), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, location: values.get('location') });
     for (const [type, field] of [['CALENDAR_SYNC', 'consent-calendar'], ['NEWS', 'consent-news'], ['SMART_HOME', 'consent-smart-home']]) if (values.get(field) === 'on') await responseJson(await fetch(`/api/profiles/${profile.id}/consents/${type}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: true }) }));
     if (values.get('proactiveEnabled') === 'on') profile = await responseJson(await fetch(`/api/profiles/${profile.id}/settings`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ proactiveEnabled: true }) }));
-    updateProfile(); loadMood(); openNotifications(); dialog.close();
+    updateProfile(); loadMood(); openNotifications(); startPresence(); dialog.close();
   } catch (error) { alert(error.message); }
 });
 $('#composer').addEventListener('submit', async (event) => {
