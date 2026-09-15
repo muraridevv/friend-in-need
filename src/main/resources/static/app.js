@@ -41,6 +41,7 @@ form.addEventListener('submit', async (event) => {
   const values = new FormData(form);
   try {
     profile = await api('/profiles', { displayName: values.get('displayName'), personality: values.get('personality'), interests: values.get('interests'), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, location: values.get('location') });
+    for (const [type, field] of [['CALENDAR_SYNC', 'consent-calendar'], ['NEWS', 'consent-news'], ['SMART_HOME', 'consent-smart-home']]) if (values.get(field) === 'on') await responseJson(await fetch(`/api/profiles/${profile.id}/consents/${type}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: true }) }));
     if (values.get('proactiveEnabled') === 'on') profile = await responseJson(await fetch(`/api/profiles/${profile.id}/settings`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ proactiveEnabled: true }) }));
     updateProfile(); openNotifications(); dialog.close();
   } catch (error) { alert(error.message); }

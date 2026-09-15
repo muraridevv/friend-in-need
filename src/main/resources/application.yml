@@ -43,3 +43,7 @@ retention:
   days: ${RETENTION_DAYS:90}
 token-budget: ${TOKEN_BUDGET:6000}
 token-budget: ${TOKEN_BUDGET:6000}
+news:
+  api-key: ${NEWS_API_KEY:}
+  base-url: ${NEWS_BASE_URL:https://newsapi.org/v2}
+token-encryption-key: ${TOKEN_ENCRYPTION_KEY:change-me-change-me-change-me-32}

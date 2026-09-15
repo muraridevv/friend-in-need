@@ -5,6 +5,7 @@ import com.friendinneed.calendar.CalendarService;
 import com.friendinneed.conversation.CompanionService;
 import com.friendinneed.integration.ContextService;
 import com.friendinneed.integration.WeatherService;
+import com.friendinneed.integration.NewsService;
 import com.friendinneed.memory.MemoryService;
 import com.friendinneed.profile.CompanionProfile;
 import com.friendinneed.profile.CompanionProfileRepository;
@@ -47,6 +48,7 @@ public class CompanionController {
     private final WeatherService weather;
     private final CalendarService calendar;
     private final MemoryService memory;
+    private final NewsService news;
     private final CompanionProfileRepository profiles;
     private final UserRepository users;
 
@@ -56,6 +58,7 @@ public class CompanionController {
             WeatherService weather,
             CalendarService calendar,
             MemoryService memory,
+            NewsService news,
             CompanionProfileRepository profiles,
             UserRepository users) {
         this.companion = companion;
@@ -63,6 +66,7 @@ public class CompanionController {
         this.weather = weather;
         this.calendar = calendar;
         this.memory = memory;
+        this.news = news;
         this.profiles = profiles;
         this.users = users;
     }
@@ -161,7 +165,7 @@ public class CompanionController {
     @GetMapping("/profiles/{id}/briefing")
     Briefing briefing(@PathVariable UUID id) {
         CompanionProfile profile = profile(id);
-        return new Briefing(weather.current(profile.getLocation()), calendar.upcoming(id).stream().map(CalendarView::of).toList());
+        return new Briefing(weather.current(profile.getLocation()), calendar.upcoming(id).stream().map(CalendarView::of).toList(), news.headlines(id, "general", 3));
     }
 
     private CompanionProfile profile(UUID id) {
@@ -205,7 +209,7 @@ public class CompanionController {
         }
     }
 
-    record Briefing(String weather, List<CalendarView> events) { }
+    record Briefing(String weather, List<CalendarView> events, List<NewsService.NewsItem> headlines) { }
 
     record ProfileView(
             UUID id,

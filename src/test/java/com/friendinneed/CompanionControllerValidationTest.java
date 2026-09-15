@@ -5,6 +5,7 @@ import com.friendinneed.calendar.CalendarService;
 import com.friendinneed.conversation.CompanionService;
 import com.friendinneed.integration.ContextService;
 import com.friendinneed.integration.WeatherService;
+import com.friendinneed.integration.NewsService;
 import com.friendinneed.memory.MemoryService;
 import com.friendinneed.profile.CompanionProfileRepository;
 import com.friendinneed.security.UserRepository;
@@ -30,6 +31,7 @@ class CompanionControllerValidationTest {
     @MockBean private WeatherService weather;
     @MockBean private CalendarService calendar;
     @MockBean private MemoryService memory;
+    @MockBean private NewsService news;
     @MockBean private CompanionProfileRepository profiles;
     @MockBean private UserRepository users;
 
