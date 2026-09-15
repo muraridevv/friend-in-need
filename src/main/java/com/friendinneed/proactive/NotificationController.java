@@ -9,6 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -22,6 +23,7 @@ public class NotificationController {
     public NotificationController(CompanionProfileRepository profiles, UserRepository users, ProactiveMessageRepository messages, NotificationPublisher notifications, Clock clock) {
         this.profiles = profiles; this.users = users; this.messages = messages; this.notifications = notifications; this.clock = clock;
     }
+    @Transactional
     @GetMapping(value = "/{id}/notifications", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter notifications(@PathVariable UUID id) {
         verifyOwner(id);
