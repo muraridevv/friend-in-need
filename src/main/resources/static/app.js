@@ -10,7 +10,7 @@ let recorder;
 let recording = false;
 let cameraStream;
 let cameraPurpose;
-const PRESENCE_ENABLED = true; let presenceStream, presenceCanvas, lastPresenceFrame, absentSince;
+const PRESENCE_ENABLED = true; let presenceStream, presenceCanvas, lastPresenceFrame, absentSince, presenceInterval;
 let voiceSocket, handsFree = false, audioQueue = [], playingAudio, speechStartedAt;
 const latency = {};
 let simulateOffline = false;
@@ -24,7 +24,7 @@ async function updateSystemStatus() {
   } catch { const bar = $('#system-status'); bar.className = 'system-status offline'; bar.querySelector('span').textContent = 'Offline mode'; }
 }
 
-function showLatency() { $("#latency-values").textContent = Object.entries(latency).map(([k,v]) => `${k}: ${Math.round(v)}ms`).join("\n"); }
+function showLatency() { const node = $("#latency-values"); if (node) node.textContent = Object.entries(latency).map(([k,v]) => `${k}: ${Math.round(v)}ms`).join("\n"); }
 function checkWakeWord(audioBuffer) { /* Replace with Porcupine.js or a custom wake-word model */ return true; }
 class SentenceChunker { constructor(onSentence) { this.value = ""; this.onSentence = onSentence; } push(token) { this.value += token; const parts = this.value.split(/(?<=[.!?])\s+|\n/); this.value = parts.pop(); parts.filter(Boolean).forEach(this.onSentence); } finish() { if (this.value.trim()) this.onSentence(this.value); this.value = ""; } }
 function stopTalking() { if (playingAudio) { playingAudio.pause(); playingAudio = null; } audioQueue.forEach(url => URL.revokeObjectURL(url)); audioQueue = []; document.querySelectorAll(".bubble.companion").forEach(b => { if (!b.textContent.includes("(interrupted)")) b.append(" (interrupted)"); }); }
@@ -36,7 +36,7 @@ async function setupVad() { if (!window.vad) return; try { const vad = await vad
 
 function emotionDot(emotion) { const dot=document.createElement("i"); dot.className=`emotion-dot ${String(emotion || "NEUTRAL").toLowerCase()}`; return dot; }
 async function loadMood() { if (!profile) return; try { const values=await responseJson(await fetch(`/api/profiles/${profile.id}/emotions?limit=10`)); const strip=$("#mood-strip"); strip.replaceChildren(...values.reverse().map(value=>emotionDot(value.emotion))); } catch {} }
-async function startPresence() { if (!PRESENCE_ENABLED || !profile || presenceStream) return; try { presenceStream = await navigator.mediaDevices.getUserMedia({video:{width:320,height:240},audio:false}); const video=document.createElement("video"); video.srcObject=presenceStream; await video.play(); presenceCanvas=document.createElement("canvas"); presenceCanvas.width=320; presenceCanvas.height=240; const detector=window.FaceDetector ? new FaceDetector({fastMode:true,maxDetectedFaces:4}) : null; setInterval(async()=>{ if(!profile) return; const ctx=presenceCanvas.getContext("2d");ctx.drawImage(video,0,0,320,240);let faces=[];try{faces=detector?await detector.detect(presenceCanvas):[];}catch{} const present=faces.length>0; if(present) absentSince=null; else absentSince??=Date.now(); const away=!present&&Date.now()-absentSince>=30000; const result=await responseJson(await fetch(`/api/profiles/${profile.id}/presence`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({status:away?"AWAY":"PRESENT",faceCount:faces.length})})); if(result.multiplePeople) bubble("I notice someone else is here. Would they like to say hi?", "companion proactive", "Nova checked in"); if(result.changed&&result.newStatus==="AWAY") $("#messages").dataset.presence="away"; if(result.changed&&result.newStatus==="PRESENT") { $("#messages").dataset.presence="present"; if(result.awayDurationMinutes) bubble(`Welcome back! You were away for about ${result.awayDurationMinutes} minutes. How’s it going?`,"companion proactive","Nova checked in"); } },2000); }catch(error){console.warn("Presence detection unavailable",error);} }
+async function startPresence() { if (!PRESENCE_ENABLED || !profile || presenceStream || !window.FaceDetector) return; try { presenceStream = await navigator.mediaDevices.getUserMedia({video:{width:320,height:240},audio:false}); const video=document.createElement("video"); video.srcObject=presenceStream; await video.play(); presenceCanvas=document.createElement("canvas"); presenceCanvas.width=320; presenceCanvas.height=240; const detector=window.FaceDetector ? new FaceDetector({fastMode:true,maxDetectedFaces:4}) : null; presenceInterval=setInterval(async()=>{ if(!profile) return; const ctx=presenceCanvas.getContext("2d");ctx.drawImage(video,0,0,320,240);let faces=[];try{faces=detector?await detector.detect(presenceCanvas):[];}catch{} const present=faces.length>0; if(present) absentSince=null; else absentSince??=Date.now(); const away=!present&&Date.now()-absentSince>=30000; const result=await responseJson(await fetch(`/api/profiles/${profile.id}/presence`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({status:away?"AWAY":"PRESENT",faceCount:faces.length})})); if(result.multiplePeople) bubble("I notice someone else is here. Would they like to say hi?", "companion proactive", "Nova checked in"); if(result.changed&&result.newStatus==="AWAY") $("#messages").dataset.presence="away"; if(result.changed&&result.newStatus==="PRESENT") { $("#messages").dataset.presence="present"; if(result.awayDurationMinutes) bubble(`Welcome back! You were away for about ${result.awayDurationMinutes} minutes. How’s it going?`,"companion proactive","Nova checked in"); } },2000); }catch(error){console.warn("Presence detection unavailable",error);} }
 function updateProfile() {
   $('#profile-name').textContent = profile ? profile.displayName : 'Getting to know you';
   $('#profile-detail').textContent = profile ? `${profile.faceEnrolled ? 'Face enrolled · ' : ''}${profile.personality}` : 'Set up your companion below.';
@@ -63,7 +63,7 @@ $('#hands-free').onclick = () => { handsFree = !handsFree; $('#hands-free').clas
 $('#mic').onclick = () => { startVoiceTurn(); setupVad(); window.voiceVad?.start(); };
 $('#menu').onclick = () => document.querySelector('aside').classList.toggle('open');
 $('#settings').onclick = () => dialog.showModal();
-$('#switch-user').onclick = () => identityDialog.showModal();
+$('#switch-user').onclick = () => { if (presenceInterval) clearInterval(presenceInterval); presenceStream?.getTracks().forEach(track => track.stop()); presenceStream=undefined; notifications?.close(); notifications=undefined; profile=null; identityDialog.showModal(); };
 $('#recognize-login').onclick = () => { identityDialog.close(); openFaceCamera('login'); };
 $('#create-profile').onclick = () => { identityDialog.close(); dialog.showModal(); };
 form.addEventListener('submit', async (event) => {
@@ -79,21 +79,8 @@ form.addEventListener('submit', async (event) => {
 $('#composer').addEventListener('submit', async (event) => {
   event.preventDefault(); const input = $('#message'); const text = input.value.trim(); if (!text) return; if (!profile) return dialog.showModal();
   bubble(text, 'user'); input.value = ''; const pending = bubble('Thinking…', 'companion');
-  try { const response = await fetch(`/api/chat/stream?profileId=${encodeURIComponent(profile.id)}&message=${encodeURIComponent(text)}`, { headers: routedHeaders() }); if (!response.ok) throw new Error('Streaming failed'); const reader = response.body.getReader(); const decoder = new TextDecoder(); let full = ''; const chunker = new SentenceChunker(queueSentence); const llmStarted = performance.now(); while (true) { const { value, done } = await reader.read(); if (done) break; for (const line of decoder.decode(value, { stream: true }).split('\n')) if (line.startsWith('data: ')) { const event = JSON.parse(line.slice(6)); if (event.token) { if (!full) { avatar.setExpression('SPEAKING'); } full += event.token; pending.textContent = full; chunker.push(event.token); if (!latency['LLM first token']) { latency['LLM first token'] = performance.now()-llmStarted; showLatency(); } } if (event.done) { avatar.setExpression('NEUTRAL'); if (event.fullMessage.includes('?')) avatar.tilt(); pending.textContent = event.fullMessage; chunker.finish(); loadMood(); } } } } catch (error) { pending.textContent = `I’m having trouble connecting: ${error.message}`; }
+  try { const response = await fetch(`/api/chat/stream?profileId=${encodeURIComponent(profile.id)}&message=${encodeURIComponent(text)}`, { headers: routedHeaders() }); if (!response.ok) throw new Error('Streaming failed'); const reader = response.body.getReader(); const decoder = new TextDecoder(); let sseBuffer = ''; let full = ''; const chunker = new SentenceChunker(queueSentence); const llmStarted = performance.now(); while (true) { const { value, done } = await reader.read(); if (done) break; sseBuffer += decoder.decode(value, { stream: true }); const lines=sseBuffer.split('\n'); sseBuffer=lines.pop(); for (const line of lines) if (line.startsWith('data: ')) { const event = JSON.parse(line.slice(6)); if (event.token) { if (!full) { avatar.setExpression('SPEAKING'); } full += event.token; pending.textContent = full; chunker.push(event.token); if (!latency['LLM first token']) { latency['LLM first token'] = performance.now()-llmStarted; showLatency(); } } if (event.done) { avatar.setExpression('NEUTRAL'); if (event.fullMessage.includes('?')) avatar.tilt(); pending.textContent = event.fullMessage; chunker.finish(); loadMood(); } } } } catch (error) { pending.textContent = `I’m having trouble connecting: ${error.message}`; }
 });
-$('#mic').onclick = async () => {
-  if (recording) { recorder.stop(); return; }
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); const chunks = [];
-    recorder = new MediaRecorder(stream); recorder.ondataavailable = (event) => chunks.push(event.data);
-    recorder.onstop = async () => {
-      stream.getTracks().forEach((track) => track.stop()); recording = false; $('#mic').textContent = '◉';
-      const body = new FormData(); body.append('audio', new Blob(chunks, { type: recorder.mimeType }), 'voice.webm');
-      try { const result = await responseJson(await fetch('/api/voice/transcriptions', { method: 'POST', body })); $('#message').value = result.text; } catch (error) { alert(`Transcription unavailable: ${error.message}`); }
-    };
-    recorder.start(); recording = true; $('#mic').textContent = '■';
-  } catch (error) { alert(`Microphone unavailable: ${error.message}`); }
-};
 async function openFaceCamera(purpose) {
   cameraPurpose = purpose; const modal = $('#camera-dialog'); const video = $('#camera');
   $('#camera-mode').textContent = purpose === 'enroll' ? 'FACE ENROLLMENT' : purpose === 'login' ? 'FACE LOGIN' : 'FACE RECOGNITION';
