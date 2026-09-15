@@ -1,6 +1,10 @@
 package com.friendinneed.conversation;
 
 import com.friendinneed.memory.MemoryService;
+import com.friendinneed.consent.*;
+import com.friendinneed.smarthome.*;
+import com.friendinneed.routine.RoutineService;
+import com.friendinneed.timer.TimerService;
 import com.friendinneed.routing.ModelChoice;
 import com.friendinneed.routing.ModelRouter;
 import com.friendinneed.routing.OllamaAdapter;
@@ -43,17 +47,24 @@ public class CompanionService {
     private final EmotionService emotions;
     private final ModelRouter modelRouter;
     private final OllamaAdapter ollama;
+    private final ConsentService consent; private final SmartHomeAdapter home; private final RoutineService routines; private final TimerService timers;
 
     public CompanionService(ChatClient.Builder builder, ConversationMessageRepository messages,
             CompanionProfileRepository profiles, MemoryService memory, ResourceLoader resourceLoader,
-            TokenBudgetService tokenBudget, EmotionService emotions, ModelRouter modelRouter, OllamaAdapter ollama) {
+            TokenBudgetService tokenBudget, EmotionService emotions, ModelRouter modelRouter, OllamaAdapter ollama, ConsentService consent, SmartHomeAdapter home, RoutineService routines, TimerService timers) {
         this.chat = builder.build(); this.messages = messages; this.profiles = profiles;
-        this.memory = memory; this.resourceLoader = resourceLoader; this.tokenBudget = tokenBudget; this.emotions = emotions; this.modelRouter = modelRouter; this.ollama = ollama;
+        this.memory = memory; this.resourceLoader = resourceLoader; this.tokenBudget = tokenBudget; this.emotions = emotions; this.modelRouter = modelRouter; this.ollama = ollama; this.consent=consent; this.home=home; this.routines=routines; this.timers=timers;
     }
 
     @Transactional
     public Reply talk(UUID profileId, String text, String context) {
         log.info("Starting companion turn: profileId={}, inputLength={}", profileId, text.length());
+        if (consent.isEnabled(profileId, IntegrationType.SMART_HOME)) {
+            if (routines.executeForPhrase(profileId, text)) return new Reply("Done, I ran your routine.");
+            java.util.Optional<String> deviceReply = deviceCommand(text); if (deviceReply.isPresent()) return new Reply(deviceReply.get());
+        }
+        java.util.Optional<com.friendinneed.timer.Timer> timer = timers.createFromNaturalLanguage(profileId, text);
+        if (timer.isPresent()) return new Reply("Done, I’ll remind you to " + timer.get().getLabel() + ".");
         CompanionProfile profile = profiles.findById(profileId)
                 .orElseThrow(() -> new NoSuchElementException("Profile not found"));
         ConversationMessage userMessage = messages.save(new ConversationMessage(profileId, MessageRole.USER, text));
@@ -91,6 +102,15 @@ public class CompanionService {
         Flux<String> response = choice == ModelChoice.LOCAL ? ollama.talkStreaming(system, text) : chat.prompt().system(system).user(text).stream().content();
         return response.doOnNext(fullMessage::append)
                 .doOnComplete(() -> messages.save(new ConversationMessage(profileId, MessageRole.ASSISTANT, fullMessage.toString())));
+    }
+
+
+    private java.util.Optional<String> deviceCommand(String text) {
+        String normalized = text.toLowerCase(java.util.Locale.ROOT);
+        if (normalized.contains("temperature")) { DeviceState thermostat = home.getDevice("climate.thermostat"); return java.util.Optional.of("It’s " + thermostat.state() + "°C in here."); }
+        if (normalized.contains("turn off") && normalized.contains("light")) { home.sendCommand("light.living_room", "turn_off", Map.of()); return java.util.Optional.of("Done, I’ve turned off the living room light."); }
+        if (normalized.contains("turn on") && normalized.contains("light")) { home.sendCommand("light.living_room", "turn_on", Map.of()); return java.util.Optional.of("Done, I’ve turned on the living room light."); }
+        return java.util.Optional.empty();
     }
 
     private void rememberIfUseful(UUID profileId, String userText) {
