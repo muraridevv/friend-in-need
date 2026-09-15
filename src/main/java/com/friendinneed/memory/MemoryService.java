@@ -8,19 +8,27 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Service
 public class MemoryService {
     private final CompanionMemoryRepository memories;
     private final EmbeddingService embeddings;
+    private final OfflineQueue offlineQueue;
 
+    @Autowired
+    public MemoryService(CompanionMemoryRepository memories, EmbeddingService embeddings, OfflineQueue offlineQueue) {
+        this.memories = memories; this.embeddings = embeddings; this.offlineQueue = offlineQueue;
+    }
+
+    /** Convenience constructor retained for focused unit tests. */
     public MemoryService(CompanionMemoryRepository memories, EmbeddingService embeddings) {
-        this.memories = memories; this.embeddings = embeddings;
+        this(memories, embeddings, new OfflineQueue(memories));
     }
 
     public void remember(UUID profileId, String content, int importance) {
         float[] vector = embeddingFor(content);
-        memories.save(new CompanionMemory(profileId, content, importance, vector.length == 0 ? null : vector));
+        offlineQueue.save(profileId, content, importance, vector.length == 0 ? null : vector);
     }
 
     public String relevantTo(UUID profileId, String query) {

@@ -9,6 +9,8 @@ import com.friendinneed.integration.ContextService;
 import com.friendinneed.integration.WeatherService;
 import com.friendinneed.integration.NewsService;
 import com.friendinneed.memory.MemoryService;
+import com.friendinneed.memory.OfflineQueue;
+import com.friendinneed.routing.ModelRouter;
 import com.friendinneed.profile.CompanionProfile;
 import com.friendinneed.profile.CompanionProfileRepository;
 import com.friendinneed.security.UserEntity;
@@ -59,6 +61,8 @@ public class CompanionController {
     private final CompanionProfileRepository profiles;
     private final UserRepository users;
     private final ConversationMessageRepository messages;
+    private final ModelRouter modelRouter;
+    private final OfflineQueue offlineQueue;
 
     public CompanionController(
             CompanionService companion,
@@ -69,7 +73,9 @@ public class CompanionController {
             NewsService news,
             CompanionProfileRepository profiles,
             UserRepository users,
-            ConversationMessageRepository messages) {
+            ConversationMessageRepository messages,
+            ModelRouter modelRouter,
+            OfflineQueue offlineQueue) {
         this.companion = companion;
         this.context = context;
         this.weather = weather;
@@ -79,7 +85,12 @@ public class CompanionController {
         this.profiles = profiles;
         this.users = users;
         this.messages = messages;
+        this.modelRouter = modelRouter;
+        this.offlineQueue = offlineQueue;
     }
+
+    @GetMapping("/system/status")
+    java.util.Map<String, String> systemStatus() { return modelRouter.status(offlineQueue.depth() > 0); }
 
     @PostMapping("/profiles")
     @ResponseStatus(HttpStatus.CREATED)

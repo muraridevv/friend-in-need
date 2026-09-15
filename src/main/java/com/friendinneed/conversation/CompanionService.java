@@ -1,6 +1,9 @@
 package com.friendinneed.conversation;
 
 import com.friendinneed.memory.MemoryService;
+import com.friendinneed.routing.ModelChoice;
+import com.friendinneed.routing.ModelRouter;
+import com.friendinneed.routing.OllamaAdapter;
 import com.friendinneed.profile.CompanionProfile;
 import com.friendinneed.profile.CompanionProfileRepository;
 import com.friendinneed.token.TokenBudgetService;
@@ -13,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -28,6 +32,7 @@ import reactor.core.publisher.Flux;
 public class CompanionService {
     private static final Logger log = LoggerFactory.getLogger(CompanionService.class);
     private static final String SYSTEM_PROMPT_TEMPLATE = "classpath:templates/system-prompt.mustache";
+    private static final AtomicLong LOCAL_TURNS = new AtomicLong();
     private static final Pattern MEMORY_WORTHY = Pattern.compile("(?i)\\b(i (like|love|prefer|hate|have)|my (name|dog|cat|birthday)|i(?:'m| am) (named|allergic)|on \\d{4}-\\d{2}-\\d{2})\\b");
     private final ChatClient chat;
     private final ConversationMessageRepository messages;
@@ -36,12 +41,14 @@ public class CompanionService {
     private final ResourceLoader resourceLoader;
     private final TokenBudgetService tokenBudget;
     private final EmotionService emotions;
+    private final ModelRouter modelRouter;
+    private final OllamaAdapter ollama;
 
     public CompanionService(ChatClient.Builder builder, ConversationMessageRepository messages,
             CompanionProfileRepository profiles, MemoryService memory, ResourceLoader resourceLoader,
-            TokenBudgetService tokenBudget, EmotionService emotions) {
+            TokenBudgetService tokenBudget, EmotionService emotions, ModelRouter modelRouter, OllamaAdapter ollama) {
         this.chat = builder.build(); this.messages = messages; this.profiles = profiles;
-        this.memory = memory; this.resourceLoader = resourceLoader; this.tokenBudget = tokenBudget; this.emotions = emotions;
+        this.memory = memory; this.resourceLoader = resourceLoader; this.tokenBudget = tokenBudget; this.emotions = emotions; this.modelRouter = modelRouter; this.ollama = ollama;
     }
 
     @Transactional
@@ -60,7 +67,12 @@ public class CompanionService {
         String system = renderSystemPrompt(Map.of("displayName", profile.getDisplayName(), "personality", profile.getPersonality(),
                 "interests", profile.getInterests(), "memories", "", "context", context + " The user current emotional state appears to be: " + emotion.emotion() + " (confidence: " + emotion.confidence() + "). Adjust your tone accordingly.", "history", ""));
         String prompt = tokenBudget.trimToFit(system, history, memories, 0);
-        String answer = chat.prompt().system(prompt).user(text).call().content();
+        ModelChoice choice = modelRouter.routeChat();
+        log.info("Serving companion turn with {} model: profileId={}", choice, profileId);
+        String answer = choice == ModelChoice.LOCAL ? ollama.talk(prompt, text) : chat.prompt().system(prompt).user(text).call().content();
+        if (choice == ModelChoice.LOCAL && LOCAL_TURNS.incrementAndGet() % 5 == 1) {
+            answer = "I’m running on my local brain right now, so I might be briefer than usual. " + answer;
+        }
         messages.save(new ConversationMessage(profileId, MessageRole.ASSISTANT, answer));
         rememberIfUseful(profileId, text);
         log.info("Completed companion turn: profileId={}, responseLength={}", profileId, answer.length());
@@ -73,8 +85,11 @@ public class CompanionService {
         messages.save(new ConversationMessage(profileId, MessageRole.USER, text));
         String system = renderSystemPrompt(Map.of("displayName", profile.getDisplayName(), "personality", profile.getPersonality(),
                 "interests", profile.getInterests(), "memories", memory.relevantTo(profileId, text), "context", context, "history", ""));
+        ModelChoice choice = modelRouter.routeChat();
+        log.info("Serving streaming companion turn with {} model: profileId={}", choice, profileId);
         StringBuilder fullMessage = new StringBuilder();
-        return chat.prompt().system(system).user(text).stream().content().doOnNext(fullMessage::append)
+        Flux<String> response = choice == ModelChoice.LOCAL ? ollama.talkStreaming(system, text) : chat.prompt().system(system).user(text).stream().content();
+        return response.doOnNext(fullMessage::append)
                 .doOnComplete(() -> messages.save(new ConversationMessage(profileId, MessageRole.ASSISTANT, fullMessage.toString())));
     }
 
