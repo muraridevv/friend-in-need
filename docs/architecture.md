@@ -17,3 +17,7 @@ A scheduled `ProactiveCheckIn` use case should query opted-in calendar/weather/n
 ## Privacy and safety
 
 The browser implementation derives a tiny camera fingerprint and sends only that value; it intentionally is not identity-grade biometric recognition. Do not use it for authentication, access control, or safety decisions. Real face recognition requires informed consent, liveness detection, encrypted biometric templates, deletion/export controls, bias evaluation, rate limits, and a human-reviewed threat model. The companion system prompt discloses that it is not emergency care and routes imminent danger to local emergency services.
+
+## Implemented vertical slice
+
+The current project delivers local calendar events, live weather through Open-Meteo (without a user API key), and a profile memory store. Memory retrieval is deterministic lexical ranking, deliberately keeping the implementation observable and inexpensive. It is a working stepping stone rather than semantic RAG; once a memory corpus grows, substitute the documented pgvector retriever behind `MemoryService`.
