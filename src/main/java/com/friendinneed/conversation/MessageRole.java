@@ -1,2 +1,3 @@
 package com.friendinneed.conversation;
-public enum MessageRole { USER, ASSISTANT, SYSTEM }
+
+public enum MessageRole {USER, ASSISTANT, SYSTEM}

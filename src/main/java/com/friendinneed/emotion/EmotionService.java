@@ -1,3 +1,32 @@
 package com.friendinneed.emotion;
-import com.fasterxml.jackson.databind.ObjectMapper; import com.friendinneed.routing.*; import org.springframework.ai.chat.client.ChatClient; import org.springframework.stereotype.Service;
-@Service public class EmotionService { private final ChatClient chat; private final ObjectMapper json; private final ModelRouter router; public EmotionService(ChatClient.Builder builder,ObjectMapper json,ModelRouter router){chat=builder.build();this.json=json;this.router=router;} public EmotionResult detectFromText(String text){if(router.routeChat()==ModelChoice.LOCAL)return new EmotionResult(EmotionLabel.NEUTRAL,0.0);try{String result=chat.prompt().system("Classify the emotion of the following text. Respond with exactly one JSON object: {\"emotion\": \"JOY|SADNESS|ANGER|FEAR|SURPRISE|NEUTRAL\", \"confidence\": 0.0-1.0}. Text: "+text).user("Return JSON only.").call().content();return json.readValue(result,EmotionResult.class);}catch(Exception exception){return new EmotionResult(EmotionLabel.NEUTRAL,0.0);}} public record EmotionResult(EmotionLabel emotion,double confidence){} }
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.friendinneed.routing.*;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.stereotype.Service;
+
+@Service
+public class EmotionService {
+    private final ChatClient chat;
+    private final ObjectMapper json;
+    private final ModelRouter router;
+
+    public EmotionService(ChatClient.Builder builder, ObjectMapper json, ModelRouter router) {
+        chat = builder.build();
+        this.json = json;
+        this.router = router;
+    }
+
+    public EmotionResult detectFromText(String text) {
+        if (router.routeChat() == ModelChoice.LOCAL) return new EmotionResult(EmotionLabel.NEUTRAL, 0.0);
+        try {
+            String result = chat.prompt().system("Classify the emotion of the following text. Respond with exactly one JSON object: {\"emotion\": \"JOY|SADNESS|ANGER|FEAR|SURPRISE|NEUTRAL\", \"confidence\": 0.0-1.0}. Text: " + text).user("Return JSON only.").call().content();
+            return json.readValue(result, EmotionResult.class);
+        } catch (Exception exception) {
+            return new EmotionResult(EmotionLabel.NEUTRAL, 0.0);
+        }
+    }
+
+    public record EmotionResult(EmotionLabel emotion, double confidence) {
+    }
+}

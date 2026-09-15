@@ -1,3 +1,45 @@
 package com.friendinneed.presence;
-import com.friendinneed.profile.*; import com.friendinneed.security.UserRepository; import java.util.*; import org.springframework.security.access.AccessDeniedException; import org.springframework.security.core.context.SecurityContextHolder; import org.springframework.web.bind.annotation.*;
-@RestController @RequestMapping("/api/profiles") public class PresenceController { private final PresenceService presence; private final CompanionProfileRepository profiles; private final UserRepository users; public PresenceController(PresenceService presence,CompanionProfileRepository profiles,UserRepository users){this.presence=presence;this.profiles=profiles;this.users=users;} @PostMapping("/{id}/presence") PresenceResponse update(@PathVariable UUID id,@RequestBody PresenceRequest request){owner(id);PresenceService.PresenceChange change=presence.recordPresence(id,request.status(),request.faceCount());return new PresenceResponse(change.changed(),change.previousStatus(),change.newStatus(),change.awayDuration()==null?null:change.awayDuration().toMinutes(),change.multiplePeople());} private void owner(UUID id){String username=SecurityContextHolder.getContext().getAuthentication()==null?null:SecurityContextHolder.getContext().getAuthentication().getName();UUID user=users.findByUsername(username).orElseThrow(()->new AccessDeniedException("Authentication is required")).getId();if(!user.equals(profiles.findById(id).orElseThrow(()->new AccessDeniedException("Profile not found")).getUserId()))throw new AccessDeniedException("Access denied");} record PresenceRequest(PresenceStatus status,Integer faceCount){} record PresenceResponse(boolean changed,PresenceStatus previousStatus,PresenceStatus newStatus,Long awayDurationMinutes,boolean multiplePeople){} }
+
+import com.friendinneed.profile.*;
+import com.friendinneed.security.UserRepository;
+
+import java.util.*;
+
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/profiles")
+public class PresenceController {
+    private final PresenceService presence;
+    private final CompanionProfileRepository profiles;
+    private final UserRepository users;
+
+    public PresenceController(PresenceService presence, CompanionProfileRepository profiles, UserRepository users) {
+        this.presence = presence;
+        this.profiles = profiles;
+        this.users = users;
+    }
+
+    @PostMapping("/{id}/presence")
+    PresenceResponse update(@PathVariable UUID id, @RequestBody PresenceRequest request) {
+        owner(id);
+        PresenceService.PresenceChange change = presence.recordPresence(id, request.status(), request.faceCount());
+        return new PresenceResponse(change.changed(), change.previousStatus(), change.newStatus(), change.awayDuration() == null ? null : change.awayDuration().toMinutes(), change.multiplePeople());
+    }
+
+    private void owner(UUID id) {
+        String username = SecurityContextHolder.getContext().getAuthentication() == null ? null : SecurityContextHolder.getContext().getAuthentication().getName();
+        UUID user = users.findByUsername(username).orElseThrow(() -> new AccessDeniedException("Authentication is required")).getId();
+        if (!user.equals(profiles.findById(id).orElseThrow(() -> new AccessDeniedException("Profile not found")).getUserId()))
+            throw new AccessDeniedException("Access denied");
+    }
+
+    record PresenceRequest(PresenceStatus status, Integer faceCount) {
+    }
+
+    record PresenceResponse(boolean changed, PresenceStatus previousStatus, PresenceStatus newStatus,
+                            Long awayDurationMinutes, boolean multiplePeople) {
+    }
+}

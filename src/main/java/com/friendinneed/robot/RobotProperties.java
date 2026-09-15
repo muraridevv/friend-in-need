@@ -1,1 +1,20 @@
-package com.friendinneed.robot;import org.springframework.boot.context.properties.ConfigurationProperties;@ConfigurationProperties("robot") public record RobotProperties(String mode,double headPanMin,double headPanMax,double headTiltMin,double headTiltMax,int ledCount){public RobotProperties{if(mode==null)mode="simulated";if(headPanMin==0&&headPanMax==0){headPanMin=-90;headPanMax=90;}if(headTiltMin==0&&headTiltMax==0){headTiltMin=-45;headTiltMax=45;}if(ledCount==0)ledCount=16;}}
+package com.friendinneed.robot;
+
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
+@ConfigurationProperties("robot")
+public record RobotProperties(String mode, double headPanMin, double headPanMax, double headTiltMin, double headTiltMax,
+                              int ledCount) {
+    public RobotProperties {
+        if (mode == null) mode = "simulated";
+        if (headPanMin == 0 && headPanMax == 0) {
+            headPanMin = -90;
+            headPanMax = 90;
+        }
+        if (headTiltMin == 0 && headTiltMax == 0) {
+            headTiltMin = -45;
+            headTiltMax = 45;
+        }
+        if (ledCount == 0) ledCount = 16;
+    }
+}

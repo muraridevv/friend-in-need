@@ -21,11 +21,13 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -90,7 +92,9 @@ public class CompanionController {
     }
 
     @GetMapping("/system/status")
-    java.util.Map<String, String> systemStatus() { return modelRouter.status(offlineQueue.depth() > 0); }
+    java.util.Map<String, String> systemStatus() {
+        return modelRouter.status(offlineQueue.depth() > 0);
+    }
 
     @PostMapping("/profiles")
     @ResponseStatus(HttpStatus.CREATED)
@@ -129,7 +133,8 @@ public class CompanionController {
         CompanionProfile profile = profile(profileId);
         StringBuilder complete = new StringBuilder();
         return companion.talkStreaming(profileId, message, context.relevantContext(profile)).map(token -> {
-            complete.append(token); return ServerSentEvent.builder(java.util.Map.<String, Object>of("token", token)).build();
+            complete.append(token);
+            return ServerSentEvent.builder(java.util.Map.<String, Object>of("token", token)).build();
         }).concatWith(Flux.defer(() -> Flux.just(ServerSentEvent.builder(java.util.Map.<String, Object>of("done", true, "fullMessage", complete.toString())).build())));
     }
 
@@ -192,7 +197,10 @@ public class CompanionController {
 
     @DeleteMapping("/profiles/{id}/conversations")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    void deleteConversations(@PathVariable UUID id) { profile(id); messages.deleteByProfileId(id); }
+    void deleteConversations(@PathVariable UUID id) {
+        profile(id);
+        messages.deleteByProfileId(id);
+    }
 
     @GetMapping("/profiles/{id}/calendar")
     List<CalendarView> calendar(@PathVariable UUID id) {
@@ -217,13 +225,15 @@ public class CompanionController {
 
     private CompanionProfile profile(UUID id) {
         CompanionProfile profile = profiles.findById(id).orElseThrow(() -> new NoSuchElementException("Profile not found"));
-        if (!currentUser().getId().equals(profile.getUserId())) throw new AccessDeniedException("Profile does not belong to the authenticated user");
+        if (!currentUser().getId().equals(profile.getUserId()))
+            throw new AccessDeniedException("Profile does not belong to the authenticated user");
         return profile;
     }
 
     private UserEntity currentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || authentication.getName() == null) throw new AccessDeniedException("Authentication is required");
+        if (authentication == null || authentication.getName() == null)
+            throw new AccessDeniedException("Authentication is required");
         return users.findByUsername(authentication.getName()).orElseThrow(() -> new AccessDeniedException("Authenticated user was not found"));
     }
 
@@ -232,23 +242,32 @@ public class CompanionController {
             @NotBlank @Size(max = 2000) String personality,
             @Size(max = 1000) String interests,
             @NotBlank @Size(max = 80) String timezone,
-            @NotBlank @Size(max = 120) String location) { }
+            @NotBlank @Size(max = 120) String location) {
+    }
 
-    record SettingsRequest(boolean proactiveEnabled) { }
+    record SettingsRequest(boolean proactiveEnabled) {
+    }
 
-    record ChatRequest(@NotNull UUID profileId, @NotBlank @Size(max = 6000) String message) { }
+    record ChatRequest(@NotNull UUID profileId, @NotBlank @Size(max = 6000) String message) {
+    }
 
-    record FaceRequest(@NotBlank @Size(min = 64, max = 4096) String descriptor) { }
+    record FaceRequest(@NotBlank @Size(min = 64, max = 4096) String descriptor) {
+    }
 
-    record FaceVerification(boolean recognized, long confidence) { }
+    record FaceVerification(boolean recognized, long confidence) {
+    }
 
-    record Recognition(boolean recognized, ProfileView profile, long confidence) { }
+    record Recognition(boolean recognized, ProfileView profile, long confidence) {
+    }
 
-    private record RecognizedCandidate(CompanionProfile profile, CompanionProfile.FaceMatch match) { }
+    private record RecognizedCandidate(CompanionProfile profile, CompanionProfile.FaceMatch match) {
+    }
 
-    record MemoryRequest(@NotBlank @Size(max = 1000) String content, @Min(1) @Max(5) int importance) { }
+    record MemoryRequest(@NotBlank @Size(max = 1000) String content, @Min(1) @Max(5) int importance) {
+    }
 
-    record EventRequest(@NotBlank @Size(max = 160) String title, @NotNull Instant startsAt, Instant endsAt) { }
+    record EventRequest(@NotBlank @Size(max = 160) String title, @NotNull Instant startsAt, Instant endsAt) {
+    }
 
     record CalendarView(UUID id, String title, Instant startsAt, Instant endsAt) {
         static CalendarView of(CalendarEvent event) {
@@ -256,9 +275,12 @@ public class CompanionController {
         }
     }
 
-    record EmotionView(com.friendinneed.conversation.MessageRole role, String content, com.friendinneed.emotion.EmotionLabel emotion, Float emotionConfidence, Instant createdAt) { }
+    record EmotionView(com.friendinneed.conversation.MessageRole role, String content,
+                       com.friendinneed.emotion.EmotionLabel emotion, Float emotionConfidence, Instant createdAt) {
+    }
 
-    record Briefing(String weather, List<CalendarView> events, List<NewsService.NewsItem> headlines) { }
+    record Briefing(String weather, List<CalendarView> events, List<NewsService.NewsItem> headlines) {
+    }
 
     record ProfileView(
             UUID id,

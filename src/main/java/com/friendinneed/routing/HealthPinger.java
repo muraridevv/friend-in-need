@@ -3,10 +3,13 @@ package com.friendinneed.routing;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicLong;
+
 import org.springframework.http.HttpMethod;
 import org.springframework.web.client.RestClient;
 
-/** Performs a lightweight provider reachability check and retains its rolling latency. */
+/**
+ * Performs a lightweight provider reachability check and retains its rolling latency.
+ */
 public class HealthPinger {
     private final RestClient client;
     private volatile Instant lastSuccess;
@@ -30,8 +33,12 @@ public class HealthPinger {
         try {
             client.method(HttpMethod.HEAD).uri(baseUrl).retrieve().toBodilessEntity();
         } catch (Exception headFailure) {
-            try { client.method(HttpMethod.GET).uri(baseUrl).retrieve().toBodilessEntity(); }
-            catch (Exception getFailure) { lastFailure = Instant.now(); return false; }
+            try {
+                client.method(HttpMethod.GET).uri(baseUrl).retrieve().toBodilessEntity();
+            } catch (Exception getFailure) {
+                lastFailure = Instant.now();
+                return false;
+            }
         }
         recordSuccess(Duration.ofNanos(System.nanoTime() - started).toMillis());
         return true;
@@ -42,9 +49,23 @@ public class HealthPinger {
         averageLatencyMillis.updateAndGet(current -> current == Long.MAX_VALUE ? latencyMillis : (current + latencyMillis) / 2);
     }
 
-    public void recordFailure() { lastFailure = Instant.now(); }
-    public Instant lastSuccess() { return lastSuccess; }
-    public Instant lastFailure() { return lastFailure; }
-    public long averageLatencyMillis() { return averageLatencyMillis.get(); }
-    public boolean healthy() { return lastSuccess != null && (lastFailure == null || lastSuccess.isAfter(lastFailure)); }
+    public void recordFailure() {
+        lastFailure = Instant.now();
+    }
+
+    public Instant lastSuccess() {
+        return lastSuccess;
+    }
+
+    public Instant lastFailure() {
+        return lastFailure;
+    }
+
+    public long averageLatencyMillis() {
+        return averageLatencyMillis.get();
+    }
+
+    public boolean healthy() {
+        return lastSuccess != null && (lastFailure == null || lastSuccess.isAfter(lastFailure));
+    }
 }

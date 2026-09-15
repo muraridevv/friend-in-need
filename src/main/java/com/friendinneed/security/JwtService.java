@@ -3,10 +3,12 @@ package com.friendinneed.security;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Date;
 import javax.crypto.SecretKey;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -35,7 +37,9 @@ public class JwtService {
         }
     }
 
-    public String extractUsername(String token) { return parse(token).getSubject(); }
+    public String extractUsername(String token) {
+        return parse(token).getSubject();
+    }
 
     private Claims parse(String token) {
         return Jwts.parser().verifyWith(signingKey).build().parseSignedClaims(token).getPayload();
@@ -43,7 +47,8 @@ public class JwtService {
 
     private static byte[] secretKeyMaterial(String secret) {
         byte[] bytes = secret.getBytes(StandardCharsets.UTF_8);
-        if ("change-me-in-production".equals(secret) || bytes.length < 32) throw new IllegalStateException("JWT_SECRET must be at least 32 bytes and must not use the default");
+        if ("change-me-in-production".equals(secret) || bytes.length < 32)
+            throw new IllegalStateException("JWT_SECRET must be at least 32 bytes and must not use the default");
         return bytes;
     }
 }

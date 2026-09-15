@@ -15,6 +15,8 @@ spring:
         options:
           model: ${OPENROUTER_MODEL:openai/gpt-4.1-mini}
           temperature: 0.75
+  flyway:
+    repair-on-migrate: true
 server.error.include-message: never
 companion:
   proactive-cron: ${PROACTIVE_CRON:0 0 9 * * *}
@@ -47,5 +49,5 @@ news:
   base-url: ${NEWS_BASE_URL:https://newsapi.org/v2}
 token-encryption-key: ${TOKEN_ENCRYPTION_KEY:}
 routing:
-  prefer-local: ${ROUTING_PREFER_LOCAL:false}
-  allow-simulate-offline: ${ROUTING_ALLOW_SIMULATE_OFFLINE:false}
+  prefer-local: ${ROUTING_PREFER_LOCAL:true}
+  allow-simulate-offline: ${ROUTING_ALLOW_SIMULATE_OFFLINE:true}
