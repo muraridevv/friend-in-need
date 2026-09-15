@@ -14,10 +14,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import java.time.Instant;
 import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api")
 public class CompanionController {
+    private static final Logger log = LoggerFactory.getLogger(CompanionController.class);
     private final CompanionService companion; private final ContextService context; private final WeatherService weather;
     private final CalendarService calendar; private final MemoryService memory; private final CompanionProfileRepository profiles;
     public CompanionController(CompanionService companion, ContextService context, WeatherService weather, CalendarService calendar, MemoryService memory, CompanionProfileRepository profiles) {
@@ -27,8 +30,8 @@ public class CompanionController {
     ProfileView create(@Valid @RequestBody CreateProfile body) { return ProfileView.of(profiles.save(new CompanionProfile(body.displayName(),body.personality(),body.interests(),body.timezone(),body.location()))); }
     @GetMapping("/profiles/{id}") ProfileView get(@PathVariable UUID id) { return ProfileView.of(profile(id)); }
     @PostMapping("/chat") CompanionService.Reply chat(@Valid @RequestBody ChatRequest body) { CompanionProfile p=profile(body.profileId()); return companion.talk(p.getId(),body.message(),context.relevantContext(p)); }
-    @PostMapping("/profiles/{id}/face") ProfileView enroll(@PathVariable UUID id,@Valid @RequestBody FaceRequest request) { var p=profile(id); p.enrollFace(request.descriptor()); return ProfileView.of(profiles.save(p)); }
-    @PostMapping("/profiles/{id}/face/verify") FaceVerification verify(@PathVariable UUID id,@Valid @RequestBody FaceRequest request) { var match=profile(id).faceMatch(request.descriptor()); return new FaceVerification(match.recognized(), match.confidence()); }
+    @PostMapping("/profiles/{id}/face") ProfileView enroll(@PathVariable UUID id,@Valid @RequestBody FaceRequest request) { var p=profile(id); log.info("Enrolling face templates: profileId={}, templateCount={}", id, request.descriptor().split("\\|").length); p.enrollFace(request.descriptor()); return ProfileView.of(profiles.save(p)); }
+    @PostMapping("/profiles/{id}/face/verify") FaceVerification verify(@PathVariable UUID id,@Valid @RequestBody FaceRequest request) { var match=profile(id).faceMatch(request.descriptor()); log.info("Face verification completed: profileId={}, recognized={}, confidence={}", id, match.recognized(), match.confidence()); return new FaceVerification(match.recognized(), match.confidence()); }
     @PostMapping("/profiles/{id}/memories") @ResponseStatus(HttpStatus.CREATED)
     void remember(@PathVariable UUID id, @Valid @RequestBody MemoryRequest request) { profile(id); memory.remember(id,request.content(),request.importance()); }
     @GetMapping("/profiles/{id}/calendar") List<CalendarView> calendar(@PathVariable UUID id) { return calendar.upcoming(profile(id).getId()).stream().map(CalendarView::of).toList(); }

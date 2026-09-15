@@ -53,31 +53,40 @@ $('#mic').onclick = async () => {
     recorder.start(); recording = true; $('#mic').textContent = '■';
   } catch (error) { alert(`Microphone unavailable: ${error.message}`); }
 };
-async function faceDescriptor(samples = 1) {
-  const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-  const video = $('#camera'); video.srcObject = stream;
-  await new Promise((resolve) => { video.onloadeddata = resolve; });
-  const templates = [];
-  try {
-    for (let sample = 0; sample < samples; sample += 1) {
-      let crop = { x: 0, y: 0, width: video.videoWidth, height: video.videoHeight };
-      if ('FaceDetector' in window) {
-        const face = (await new FaceDetector({ fastMode: false, maxDetectedFaces: 1 }).detect(video))[0];
-        if (!face) throw new Error('No face detected. Center your face and try again.');
-        crop = face.boundingBox;
-      }
-      const canvas = $('#canvas'); const context = canvas.getContext('2d', { willReadFrequently: true }); canvas.width = 32; canvas.height = 32;
-      context.drawImage(video, crop.x, crop.y, crop.width, crop.height, 0, 0, 32, 32);
-      const pixels = context.getImageData(0, 0, 32, 32).data; const shades = [];
-      for (let index = 0; index < pixels.length; index += 4) shades.push((pixels[index] * 0.299) + (pixels[index + 1] * 0.587) + (pixels[index + 2] * 0.114));
-      const mean = shades.reduce((sum, shade) => sum + shade, 0) / shades.length;
-      templates.push(shades.map((shade) => shade >= mean ? '1' : '0').join(''));
-      if (sample + 1 < samples) await new Promise((resolve) => setTimeout(resolve, 250));
-    }
-    return templates.join('|');
-  } finally { stream.getTracks().forEach((track) => track.stop()); }
+async function openFaceCamera(purpose) {
+  cameraPurpose = purpose; const modal = $('#camera-dialog'); const video = $('#camera');
+  $('#camera-mode').textContent = purpose === 'enroll' ? 'FACE ENROLLMENT' : 'FACE RECOGNITION';
+  $('#camera-status').textContent = 'Keep your face centered in the live preview, then select Capture face.';
+  $('#camera-capture').textContent = purpose === 'enroll' ? 'Save 3 templates' : 'Recognize me';
+  try { cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } }); video.srcObject = cameraStream; await new Promise((resolve) => { video.onloadeddata = resolve; }); modal.showModal(); } catch (error) { alert(`Camera unavailable: ${error.message}`); }
 }
-$('#face').onclick = async () => { if (!profile) return dialog.showModal(); try { profile = await api(`/profiles/${profile.id}/face`, { descriptor: await faceDescriptor(3) }); localStorage.setItem('fin-profile', JSON.stringify(profile)); updateProfile(); alert('Face enrollment complete. Three camera templates were saved for more reliable recognition.'); } catch (error) { alert(error.message); } };
-$('#briefing').onclick = async () => { if (!profile) return dialog.showModal(); try { const response = await fetch(`/api/profiles/${profile.id}/briefing`); const briefing = await responseJson(response); const events = briefing.events.length ? briefing.events.map((event) => `${event.title} at ${new Date(event.startsAt).toLocaleString()}`).join('; ') : 'No events in the next seven days.'; const text = `${briefing.weather} ${events}`; bubble(text, 'companion'); speak(text); } catch (error) { alert(error.message); } };
-$('#verify').onclick = async () => { if (!profile) return dialog.showModal(); try { const result = await api(`/profiles/${profile.id}/face/verify`, { descriptor: await faceDescriptor(2) }); alert(result.recognized ? `Welcome back! Face similarity: ${result.confidence}%` : `I could not match this capture (similarity: ${result.confidence}%). Keep your face centered and try again.`); } catch (error) { alert(error.message); } };
+function closeFaceCamera() { if (cameraStream) cameraStream.getTracks().forEach((track) => track.stop()); cameraStream = undefined; $('#camera').srcObject = null; $('#camera-dialog').close(); }
+async function captureFaceTemplates(samples) {
+  const video = $('#camera'); const templates = [];
+  for (let sample = 0; sample < samples; sample += 1) {
+    $('#camera-status').textContent = `Capturing template ${sample + 1} of ${samples}. Keep still…`;
+    let crop = { x: 0, y: 0, width: video.videoWidth, height: video.videoHeight };
+    if ('FaceDetector' in window) { const face = (await new FaceDetector({ fastMode: false, maxDetectedFaces: 1 }).detect(video))[0]; if (!face) throw new Error('No face detected. Stay in the center of the preview and try again.'); crop = face.boundingBox; }
+    const canvas = $('#canvas'); const context = canvas.getContext('2d', { willReadFrequently: true }); canvas.width = 32; canvas.height = 32;
+    context.drawImage(video, crop.x, crop.y, crop.width, crop.height, 0, 0, 32, 32);
+    const pixels = context.getImageData(0, 0, 32, 32).data; const shades = [];
+    for (let index = 0; index < pixels.length; index += 4) shades.push((pixels[index] * 0.299) + (pixels[index + 1] * 0.587) + (pixels[index + 2] * 0.114));
+    const mean = shades.reduce((sum, shade) => sum + shade, 0) / shades.length; templates.push(shades.map((shade) => shade >= mean ? '1' : '0').join(''));
+    if (sample + 1 < samples) await new Promise((resolve) => setTimeout(resolve, 350));
+  }
+  return templates.join('|');
+}
+$('#camera-cancel').onclick = closeFaceCamera;
+$('#camera-dialog').addEventListener('cancel', (event) => { event.preventDefault(); closeFaceCamera(); });
+$('#face').onclick = () => { if (!profile) return dialog.showModal(); openFaceCamera('enroll'); };
+$('#verify').onclick = () => { if (!profile) return dialog.showModal(); openFaceCamera('verify'); };
+$('#camera-capture').onclick = async () => {
+  const capture = $('#camera-capture'); capture.disabled = true;
+  try {
+    const descriptor = await captureFaceTemplates(cameraPurpose === 'enroll' ? 3 : 2);
+    if (cameraPurpose === 'enroll') { profile = await api(`/profiles/${profile.id}/face`, { descriptor }); localStorage.setItem('fin-profile', JSON.stringify(profile)); updateProfile(); $('#camera-status').textContent = 'Enrollment complete.'; }
+    else { const result = await api(`/profiles/${profile.id}/face/verify`, { descriptor }); $('#camera-status').textContent = result.recognized ? `Welcome back! Face similarity: ${result.confidence}%` : `No match (${result.confidence}%). Keep centered and capture again.`; if (!result.recognized) { capture.disabled = false; return; } }
+    setTimeout(closeFaceCamera, 900);
+  } catch (error) { $('#camera-status').textContent = error.message; capture.disabled = false; }
+};
 updateProfile(); if (!profile) dialog.showModal();

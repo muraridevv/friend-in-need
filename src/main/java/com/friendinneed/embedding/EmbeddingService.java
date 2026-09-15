@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
-import java.util.List;
 import java.util.Map;
 
 /** Calls the dedicated embedding model, independently of the conversation model. */
@@ -12,10 +11,10 @@ import java.util.Map;
 public class EmbeddingService {
     private final EmbeddingProperties properties;
     private final RestClient client;
-    public EmbeddingService(EmbeddingProperties properties) { this.properties=properties; this.client=RestClient.builder().baseUrl(properties.baseUrl()).build(); }
+    public EmbeddingService(EmbeddingProperties properties) { this.properties=properties; String baseUrl=properties.baseUrl().endsWith("/") ? properties.baseUrl() : properties.baseUrl()+"/"; this.client=RestClient.builder().baseUrl(baseUrl).build(); }
     public float[] embed(String text) {
         if (properties.apiKey() == null || properties.apiKey().isBlank()) return new float[0];
-        JsonNode response=client.post().uri("/v1/embeddings").header(HttpHeaders.AUTHORIZATION,"Bearer "+properties.apiKey())
+        JsonNode response=client.post().uri("v1/embeddings").header(HttpHeaders.AUTHORIZATION,"Bearer "+properties.apiKey())
                 .body(Map.of("model",properties.model(),"input",text)).retrieve().body(JsonNode.class);
         JsonNode values=response.path("data").path(0).path("embedding"); float[] result=new float[values.size()];
         for (int index=0; index<values.size(); index++) result[index]=(float) values.get(index).asDouble();
