@@ -19,7 +19,7 @@ server.error.include-message: never
 companion:
   proactive-cron: ${PROACTIVE_CRON:0 0 9 * * *}
   public-url: ${PUBLIC_URL:http://localhost:8080}
-management.endpoints.web.exposure.include: health,info
+management.endpoints.web.exposure.include: health,info,prometheus
 embedding:
   base-url: ${EMBEDDING_BASE_URL:https://openrouter.ai/api}
   api-key: ${EMBEDDING_API_KEY:}
@@ -35,3 +35,14 @@ logging:
     com.friendinneed: INFO
   pattern:
     console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [%thread] %logger{36} - %msg%n"
+jwt:
+  secret: ${JWT_SECRET:change-me-in-production}
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:8080}
+retention:
+  days: ${RETENTION_DAYS:90}
+token-budget: ${TOKEN_BUDGET:6000}
+news:
+  api-key: ${NEWS_API_KEY:}
+  base-url: ${NEWS_BASE_URL:https://newsapi.org/v2}
+token-encryption-key: ${TOKEN_ENCRYPTION_KEY:change-me-change-me-change-me-32}

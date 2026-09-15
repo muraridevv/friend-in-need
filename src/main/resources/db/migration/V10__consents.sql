@@ -1,0 +1,2 @@
+create table integration_consent (id uuid primary key, profile_id uuid not null references companion_profile(id) on delete cascade, integration_type varchar(32) not null, enabled boolean not null default false, granted_at timestamptz, revoked_at timestamptz, unique(profile_id, integration_type));
+create table oauth_token (id uuid primary key, profile_id uuid not null references companion_profile(id) on delete cascade, provider varchar(80) not null, encrypted_access_token text not null, encrypted_refresh_token text, expires_at timestamptz not null);

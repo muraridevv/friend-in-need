@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Map;
+import com.friendinneed.emotion.EmotionLabel;
 
 /** OpenAI-compatible voice adapter. Its base URL is deliberately separate from OpenRouter. */
 @Service
@@ -25,9 +26,16 @@ public class VoiceService {
         JsonNode response=client.post().uri("audio/transcriptions").header(HttpHeaders.AUTHORIZATION,"Bearer "+properties.apiKey()).contentType(MediaType.MULTIPART_FORM_DATA).body(body).retrieve().body(JsonNode.class);
         String text = response.path("text").asText(); log.info("STT transcription completed: textLength={}", text.length()); return text;
     }
-    public byte[] speak(String text) {
+    public byte[] speak(String text) { return speak(text, null); }
+    public byte[] speak(String text, EmotionLabel emotion) {
         configured(); log.info("Requesting TTS synthesis: model={}, voice={}, textLength={}", properties.ttsModel(), properties.ttsVoice(), text.length()); return client.post().uri("audio/speech").header(HttpHeaders.AUTHORIZATION,"Bearer "+properties.apiKey()).contentType(MediaType.APPLICATION_JSON)
-                .body(Map.of("model",properties.ttsModel(),"voice",properties.ttsVoice(),"input",text,"response_format","mp3")).retrieve().body(byte[].class);
+                .body(ttsBody(text, emotion)).retrieve().body(byte[].class);
+    }
+    private Map<String, Object> ttsBody(String text, EmotionLabel emotion) {
+        String voice = emotion == EmotionLabel.JOY ? "shimmer" : properties.ttsVoice();
+        double speed = emotion == EmotionLabel.JOY ? 1.1 : emotion == EmotionLabel.SADNESS ? 0.9 : 1.0;
+        String instructions = emotion == EmotionLabel.ANGER ? "Speak in a calm, soothing tone" : emotion == EmotionLabel.SADNESS ? "Speak gently and warmly" : "";
+        return Map.of("model", properties.ttsModel(), "voice", voice, "input", text, "response_format", "mp3", "speed", speed, "instructions", instructions);
     }
     private String normalizeBaseUrl(String configuredBaseUrl) {
         if (configuredBaseUrl == null || configuredBaseUrl.isBlank()) return "http://localhost/";

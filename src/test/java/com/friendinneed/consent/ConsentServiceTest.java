@@ -1,0 +1,3 @@
+package com.friendinneed.consent;
+import static org.junit.jupiter.api.Assertions.*; import static org.mockito.Mockito.*; import java.util.*; import org.junit.jupiter.api.Test;
+class ConsentServiceTest { @Test void grantRevokeAndCheck(){ ConsentRepository repo=mock(ConsentRepository.class); UUID id=UUID.randomUUID(); when(repo.findByProfileIdAndIntegrationType(id,IntegrationType.NEWS)).thenReturn(Optional.empty()); when(repo.save(any())).thenAnswer(i->i.getArgument(0)); ConsentService service=new ConsentService(repo); assertTrue(service.grant(id,IntegrationType.NEWS).isEnabled()); assertFalse(service.revoke(id,IntegrationType.NEWS).isEnabled()); } }
