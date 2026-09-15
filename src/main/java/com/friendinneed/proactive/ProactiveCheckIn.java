@@ -12,6 +12,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
 import org.springframework.ai.chat.client.ChatClient;
+import com.friendinneed.routing.*;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,13 +26,13 @@ public class ProactiveCheckIn {
     private final ProactiveMessageRepository messages;
     private final NotificationPublisher notifications;
     private final ChatClient chat;
-    private final Clock clock;
+    private final Clock clock; private final ModelRouter router; private final OllamaAdapter ollama;
 
     public ProactiveCheckIn(CompanionProfileRepository profiles, CalendarEventRepository events,
             ConversationMessageRepository conversations, WeatherService weather, ProactiveMessageRepository messages,
-            NotificationPublisher notifications, ChatClient.Builder chatBuilder, Clock clock) {
+            NotificationPublisher notifications, ChatClient.Builder chatBuilder, Clock clock, ModelRouter router, OllamaAdapter ollama) {
         this.profiles = profiles; this.events = events; this.conversations = conversations; this.weather = weather;
-        this.messages = messages; this.notifications = notifications; this.chat = chatBuilder.build(); this.clock = clock;
+        this.messages = messages; this.notifications = notifications; this.chat = chatBuilder.build(); this.clock = clock; this.router=router; this.ollama=ollama;
     }
 
     @Scheduled(cron = "${companion.proactive-cron}")
@@ -59,7 +60,7 @@ public class ProactiveCheckIn {
         String context = contextFor(profile, now);
         String prompt = "Generate a single warm, brief check-in message for " + profile.getDisplayName()
                 + ". Context: " + context + ". Do not ask more than one question.";
-        String content = chat.prompt().system(prompt).user("Write the check-in now.").call().content();
+        String content = router.routeChat() == ModelChoice.LOCAL ? ollama.talk(prompt, "Write the check-in now.") : chat.prompt().system(prompt).user("Write the check-in now.").call().content();
         ProactiveMessage message = messages.save(new ProactiveMessage(profile.getId(), content, now));
         if (notifications.publish(message)) message.markDelivered(now);
     }

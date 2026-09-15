@@ -56,7 +56,6 @@ public class CompanionService {
         this.memory = memory; this.resourceLoader = resourceLoader; this.tokenBudget = tokenBudget; this.emotions = emotions; this.modelRouter = modelRouter; this.ollama = ollama; this.consent=consent; this.home=home; this.routines=routines; this.timers=timers;
     }
 
-    @Transactional
     public Reply talk(UUID profileId, String text, String context) {
         log.info("Starting companion turn: profileId={}, inputLength={}", profileId, text.length());
         if (consent.isEnabled(profileId, IntegrationType.SMART_HOME)) {
